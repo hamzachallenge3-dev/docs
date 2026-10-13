@@ -12,11 +12,12 @@
 - Use the Mintlify MCP server, `https://mcp.mintlify.com`, to edit content and settings via MCP
 - Use the Mintlify docs MCP server, `https://www.mintlify.com/docs/mcp`, to query information about using Mintlify via MCP
 
-## ECC68 lab
+## Hamza Agent Hub + ECC68
 
-- Runnable MCP plugin source is under `ecc68-lab/` (isolated from production hubs)
-- `ecc-chief-of-staff` differentiates tasks and assigns specialist agents
-- Do not invent paid model calls; live model requires `ECC68_MODEL_URL`
+- Unified plugin: `hamza-agent-hub/` (Desk + ECC68 + Forge). Boss: `hub-boss`
+- ECC-only lab: `ecc68-lab/` — orchestrator `ecc-chief-of-staff`
+- Do not mutate production Hamza Agent Hub or production GLM/Headroom
+- Live model requires `HAH_MODEL_URL` / `ECC68_MODEL_URL` (free endpoint only)
 
 ## Terminology
 

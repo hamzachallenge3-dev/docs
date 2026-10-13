@@ -1,9 +1,14 @@
 # Mintlify Starter Kit
 
+## Hamza Agent Hub (unified plugin)
+
+New unified MCP plugin: [`hamza-agent-hub/`](./hamza-agent-hub/) — Automation Desk + ECC68 + Cross-Forge Intelligence.  
+Boss router: `hub-boss`. See [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md).
+
 ## ECC68 MCP plugin (lab)
 
-A real authenticated MCP plugin with 68 agents lives in [`ecc68-lab/`](./ecc68-lab/).  
-The orchestrator that routes work is `ecc-chief-of-staff`. See [`ecc68-lab/README.md`](./ecc68-lab/README.md).
+ECC-only lab plugin: [`ecc68-lab/`](./ecc68-lab/).  
+Orchestrator: `ecc-chief-of-staff`. See [`ecc68-lab/README.md`](./ecc68-lab/README.md).
 
 ---
 

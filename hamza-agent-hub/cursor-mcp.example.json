@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "hamza-agent-hub": {
+      "command": "node",
+      "args": ["--experimental-sqlite", "/ABSOLUTE/PATH/TO/hamza-agent-hub/dist/index.js"],
+      "env": {
+        "HAH_TRANSPORT": "stdio",
+        "HAH_CONCURRENCY": "2"
+      }
+    }
+  }
+}

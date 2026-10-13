@@ -1,0 +1,16 @@
+[
+  {
+    "id": "hub-boss",
+    "pack": "hub",
+    "category": "orchestrator",
+    "description": "Hamza Agent Hub boss: differentiates work across Desk, ECC68, and Forge packs and assigns the right specialists.",
+    "tools": [
+      "hub_list_packs",
+      "hub_list_agents",
+      "dispatch_agent",
+      "workspace_write",
+      "workspace_list",
+      "workspace_read"
+    ]
+  }
+]

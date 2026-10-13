@@ -17,6 +17,7 @@ import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.j
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
 import { seoAuditHtml } from '../packs/tools13/seo.js';
+import { CANCEL, RO, RO_OPEN, WRITE_LOCAL } from './annotations.js';
 import fs from 'node:fs';
 
 function jsonText(data: unknown) {
@@ -25,46 +26,59 @@ function jsonText(data: unknown) {
 
 export function createHamzaHubServer(): McpServer {
   startQueue();
-  const server = new McpServer({ name: 'hamza-agent-hub', version: '1.0.0' });
-
-  server.tool('hub_health', 'Hub runtime/model/storage readiness (no secrets)', {}, async () => {
-    let ok = false;
-    let error: string | null = null;
-    try {
-      assertCatalog();
-      ok = true;
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-    }
-    const model = modelStatus();
-    return jsonText({
-      ok,
-      service: 'hamza-agent-hub',
-      packs: PACKS,
-      agents: listAgents().length,
-      ecc68_agents: listAgents('ecc68').length,
-      desk_agents: listAgents('desk').length,
-      forge_agents: listAgents('forge').length,
-      tools13_agents: listAgents('tools13').length,
-      tools13_manifest: loadTools13Manifest().length,
-      boss_knows_all: Boolean(getAgent('hub-boss')?.tools.includes('hub_full_roster')),
-      agent_browse: Boolean(getAgent('hub-agent-browse')?.tools.includes('hub_agent_browse')),
-      hub_agents: listAgents('hub').length,
-      freellmapi: freellmapiStatusSummary(),
-      freellmapi_live: freellmapiEnabled() && model.configured,
-      queue: queueStats(),
-      model,
-      storage: { db_exists: fs.existsSync(config.dbPath) },
-      desk_twin: config.deskUrl,
-      production_guard: 'This lab plugin does not mutate production Hamza Agent Hub or GLM/Headroom',
-      error,
-    });
+  const server = new McpServer({
+    name: 'hamza-agent-hub',
+    version: '1.1.0',
+    title: 'Hamza Agent Hub',
   });
+
+  server.tool(
+    'hub_health',
+    'Hub runtime/model/storage readiness (no secrets)',
+    {},
+    RO,
+    async () => {
+      let ok = false;
+      let error: string | null = null;
+      try {
+        assertCatalog();
+        ok = true;
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      const model = modelStatus();
+      return jsonText({
+        ok,
+        service: 'hamza-agent-hub',
+        version: '1.1.0',
+        chatgpt_plugin: true,
+        packs: PACKS,
+        agents: listAgents().length,
+        ecc68_agents: listAgents('ecc68').length,
+        desk_agents: listAgents('desk').length,
+        forge_agents: listAgents('forge').length,
+        tools13_agents: listAgents('tools13').length,
+        tools13_manifest: loadTools13Manifest().length,
+        boss_knows_all: Boolean(getAgent('hub-boss')?.tools.includes('hub_full_roster')),
+        agent_browse: Boolean(getAgent('hub-agent-browse')?.tools.includes('hub_agent_browse')),
+        hub_agents: listAgents('hub').length,
+        freellmapi: freellmapiStatusSummary(),
+        freellmapi_live: freellmapiEnabled() && model.configured,
+        queue: queueStats(),
+        model,
+        storage: { db_exists: fs.existsSync(config.dbPath) },
+        desk_twin: config.deskUrl,
+        production_guard: 'This lab plugin does not mutate production Hamza Agent Hub or GLM/Headroom',
+        error,
+      });
+    }
+  );
 
   server.tool(
     'hub_freellmapi_status',
     'Probe FreeLLMAPI (open-source free LLM gateway) — /v1/models health, catalog sample, connection hints',
     {},
+    RO_OPEN,
     async () => jsonText({ config: freellmapiStatusSummary(), probe: await probeFreellmapi() })
   );
 
@@ -76,6 +90,7 @@ export function createHamzaHubServer(): McpServer {
       system: z.string().optional(),
       model: z.string().optional(),
     },
+    RO_OPEN,
     async ({ prompt, system, model }) => {
       if (!freellmapiEnabled() && !config.modelUrl) {
         return {
@@ -89,7 +104,6 @@ export function createHamzaHubServer(): McpServer {
         };
       }
       try {
-        // Temporarily treat as enabled for this call if MODEL_URL already points at a gateway
         const result = await freellmapiChat({
           system: system || 'You are a helpful assistant for Hamza Agent Hub lab.',
           messages: [{ role: 'user', content: prompt }],
@@ -106,7 +120,7 @@ export function createHamzaHubServer(): McpServer {
     }
   );
 
-  server.tool('hub_list_packs', 'List Hub packs (hub, desk, ecc68, forge)', {}, async () =>
+  server.tool('hub_list_packs', 'List Hub packs (hub, desk, ecc68, forge, tools13)', {}, RO, async () =>
     jsonText({ packs: PACKS })
   );
 
@@ -114,6 +128,7 @@ export function createHamzaHubServer(): McpServer {
     'hub_list_agents',
     'List all agents across packs (optional pack filter)',
     { pack: z.string().optional() },
+    RO,
     async ({ pack }) => {
       const agents = listAgents(pack).map((a) => ({
         id: a.id,
@@ -131,6 +146,7 @@ export function createHamzaHubServer(): McpServer {
     'hub_boss_route',
     'Preview how hub-boss would differentiate and assign a mission using FULL roster awareness',
     { task: z.string() },
+    RO,
     async ({ task }) => jsonText(planWithBoss(task))
   );
 
@@ -138,6 +154,7 @@ export function createHamzaHubServer(): McpServer {
     'hub_full_roster',
     'Return the complete agent directory that hub-boss knows (all packs)',
     {},
+    RO,
     async () => jsonText({ count: listAgents().length, directory: buildBossDirectory() })
   );
 
@@ -153,6 +170,7 @@ export function createHamzaHubServer(): McpServer {
       include_tools13: z.boolean().optional(),
       include_mcp: z.boolean().optional(),
     },
+    RO,
     async (args) => {
       if (args.agent_id) {
         const detail = browseAgentDetail(args.agent_id);
@@ -181,6 +199,7 @@ export function createHamzaHubServer(): McpServer {
     'hub_tools13_lookup',
     'List or look up the 13 Hub Boss recovery tools',
     { query: z.string().optional() },
+    RO,
     async ({ query }) => {
       if (!query || query === '*' || query === 'all') return jsonText(loadTools13Manifest());
       const hit = lookupTool13(query);
@@ -194,18 +213,20 @@ export function createHamzaHubServer(): McpServer {
     'seo_audit_html',
     'Free Marketing SEO Audit on local HTML (tools13) — no Okara, no posting',
     { html: z.string(), url: z.string().optional() },
+    RO,
     async ({ html, url }) => jsonText(seoAuditHtml(html, url || 'https://example.com/'))
   );
 
   server.tool(
     'run_agent',
-    'Queue an agent from any pack. Use hub-boss to differentiate work across Desk + ECC68 + Forge.',
+    'Queue an agent from any pack. Use hub-boss to differentiate work across Desk + ECC68 + Forge + Tools13.',
     {
       agent_id: z.string(),
       task: z.string(),
       workspace_id: z.string(),
       idempotency_key: z.string(),
     },
+    WRITE_LOCAL,
     async (args) => {
       try {
         const result = enqueueAgentTask(args);
@@ -229,76 +250,104 @@ export function createHamzaHubServer(): McpServer {
     }
   );
 
-  server.tool('task_status', 'Get task status/progress', { task_id: z.string() }, async ({ task_id }) => {
-    const task = getTask(task_id);
-    if (!task) return { isError: true, content: [{ type: 'text' as const, text: `not found: ${task_id}` }] };
-    return jsonText({
-      task_id: task.id,
-      agent_id: task.agent_id,
-      status: task.status,
-      progress: task.progress,
-      progress_message: task.progress_message,
-    });
-  });
-
-  server.tool('task_result', 'Get task output/evidence/artifacts', { task_id: z.string() }, async ({ task_id }) => {
-    const task = getTask(task_id);
-    if (!task) return { isError: true, content: [{ type: 'text' as const, text: `not found: ${task_id}` }] };
-    return jsonText({
-      task_id: task.id,
-      status: task.status,
-      output: task.output,
-      error: task.error,
-      evidence: safe(task.evidence),
-      tool_log: safe(task.tool_log),
-      artifacts: safe(task.artifacts),
-      events: listEvents(task_id).slice(-40),
-    });
-  });
-
-  server.tool('cancel_task', 'Cancel a queued/running task', { task_id: z.string() }, async ({ task_id }) => {
-    try {
-      return jsonText(cancelTask(task_id));
-    } catch (err) {
-      return {
-        isError: true,
-        content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
-      };
+  server.tool(
+    'task_status',
+    'Get task status/progress',
+    { task_id: z.string() },
+    RO,
+    async ({ task_id }) => {
+      const task = getTask(task_id);
+      if (!task) return { isError: true, content: [{ type: 'text' as const, text: `not found: ${task_id}` }] };
+      return jsonText({
+        task_id: task.id,
+        agent_id: task.agent_id,
+        status: task.status,
+        progress: task.progress,
+        progress_message: task.progress_message,
+      });
     }
-  });
+  );
 
-  // Direct Automation Desk tools (same contracts as desk.imdifferent01.com)
+  server.tool(
+    'task_result',
+    'Get task output/evidence/artifacts',
+    { task_id: z.string() },
+    RO,
+    async ({ task_id }) => {
+      const task = getTask(task_id);
+      if (!task) return { isError: true, content: [{ type: 'text' as const, text: `not found: ${task_id}` }] };
+      return jsonText({
+        task_id: task.id,
+        status: task.status,
+        output: task.output,
+        error: task.error,
+        evidence: safe(task.evidence),
+        tool_log: safe(task.tool_log),
+        artifacts: safe(task.artifacts),
+        events: listEvents(task_id).slice(-40),
+      });
+    }
+  );
+
+  server.tool(
+    'cancel_task',
+    'Cancel a queued/running task',
+    { task_id: z.string() },
+    CANCEL,
+    async ({ task_id }) => {
+      try {
+        return jsonText(cancelTask(task_id));
+      } catch (err) {
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
+        };
+      }
+    }
+  );
+
   server.tool(
     'clean_leads',
     'Clean and dedupe emails from messy text or CSV (Automation Desk)',
     { text: z.string().optional(), csv: z.string().optional() },
+    RO,
     async (args) => jsonText(cleanLeads(args))
   );
   server.tool(
     'sheets_to_json',
     'Convert CSV/TSV spreadsheet text to JSON rows (Automation Desk)',
     { csv: z.string(), dialect: z.string().optional() },
+    RO,
     async (args) => jsonText(sheetsToJson(args))
   );
   server.tool(
     'extract_contacts',
     'Extract emails, phones and social links from public HTML (Automation Desk)',
     { html: z.string().optional(), url: z.string().optional() },
+    RO,
     async (args) => jsonText(extractContacts(args))
   );
 
-  // Forge intelligence
-  server.tool('forge_detect', 'Detect code-hosting forge for a URL', { url: z.string() }, async ({ url }) =>
-    jsonText(forgeDetect(url))
+  server.tool(
+    'forge_detect',
+    'Detect code-hosting forge for a URL',
+    { url: z.string() },
+    RO,
+    async ({ url }) => jsonText(forgeDetect(url))
   );
   server.tool(
     'github_url_tricks',
     'Expand a GitHub repo URL into intelligence viewer/API links',
     { url: z.string() },
+    RO,
     async ({ url }) => jsonText(githubUrlTricks(url))
   );
-  server.tool('agent_mining_queries', 'Curated GitHub queries to mine agents/skills/MCP', {}, async () =>
-    jsonText(agentMiningQueries())
+  server.tool(
+    'agent_mining_queries',
+    'Curated GitHub queries to mine agents/skills/MCP',
+    {},
+    RO,
+    async () => jsonText(agentMiningQueries())
   );
 
   return server;

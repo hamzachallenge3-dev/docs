@@ -15,6 +15,7 @@
 - الوكلاء: **92** (hub-boss + hub-agent-browse + hub-freellmapi + desk + ecc + forge + tools13)
 - تصفّح الكل: `hub_agent_browse` / `hub-agent-browse`
 - النموذج المجاني: **FreeLLMAPI** (OSS) عبر `hub-freellmapi` — انظر `hamza-agent-hub/docs/FREELLMAPI.md`
+- حزمة ChatGPT/Codex Store: `hamza-agent-hub/chatgpt-plugin/` + `CODEX-HANDOFF.md` لـ Codex
 - إعداد Cursor: [`cursor-mcp.hamza-agent-hub.example.json`](./cursor-mcp.hamza-agent-hub.example.json)
 - الدليل: [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md)
 

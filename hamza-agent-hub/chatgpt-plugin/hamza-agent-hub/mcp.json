@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "hamza-agent-hub": {
+      "type": "streamable-http",
+      "url": "https://YOUR-PUBLIC-HOST/mcp",
+      "authentication": {
+        "type": "none"
+      }
+    }
+  }
+}

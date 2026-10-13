@@ -23,7 +23,23 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     const app = createMcpExpressApp({ host: config.host });
+    // Public endpoints for ChatGPT / Codex plugin directory domain verification
+    app.get('/healthz', (_req, res) =>
+      res.json({ ok: true, service: 'hamza-agent-hub', version: '1.1.0', chatgpt_plugin: true })
+    );
+    app.get('/.well-known/openai-apps-challenge', (_req, res) => {
+      const token = process.env.HAH_OPENAI_APPS_CHALLENGE || '';
+      if (!token) {
+        res.status(404).type('text/plain').send('set HAH_OPENAI_APPS_CHALLENGE to the portal token');
+        return;
+      }
+      res.type('text/plain').send(token);
+    });
     app.use((req, res, next) => {
+      if (req.path === '/healthz' || req.path === '/.well-known/openai-apps-challenge') {
+        next();
+        return;
+      }
       const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
       if (token !== config.authToken) {
         res.status(401).json({ error: 'unauthorized' });
@@ -36,7 +52,6 @@ async function main(): Promise<void> {
       }
       next();
     });
-    app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'hamza-agent-hub' }));
     app.all('/mcp', async (req, res) => {
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });
       await server.connect(transport);

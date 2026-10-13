@@ -22,6 +22,8 @@
 - Cursor MCP example: `cursor-mcp.hamza-agent-hub.example.json`
 - Do not mutate production Hamza Agent Hub or production GLM/Headroom
 - Live model: FreeLLMAPI at `http://127.0.0.1:3001/v1` (or any free OpenAI-compatible URL)
+- ChatGPT/Codex store package: `hamza-agent-hub/chatgpt-plugin/` — pack with `npm run pack:chatgpt`
+- Codex paste brief: `hamza-agent-hub/CODEX-HANDOFF.md`
 
 ## Terminology
 

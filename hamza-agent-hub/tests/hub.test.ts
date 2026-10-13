@@ -86,6 +86,21 @@ describe('hamza agent hub', () => {
     expect(planWithBoss('Connect FreeLLMAPI lotf model gateway').primary).toBe('hub-freellmapi');
   });
 
+  it('ChatGPT plugin package has manifest and skills', () => {
+    const root = path.resolve(__dirname, '..');
+    const manifest = path.join(root, 'chatgpt-plugin/hamza-agent-hub/.codex-plugin/plugin.json');
+    expect(fs.existsSync(manifest)).toBe(true);
+    const pj = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+    expect(pj.name).toBe('hamza-agent-hub');
+    expect(pj.interface.displayName).toBe('Hamza Agent Hub');
+    const skillsDir = path.join(root, 'chatgpt-plugin/hamza-agent-hub/skills');
+    const skills = fs.readdirSync(skillsDir).filter((d) =>
+      fs.existsSync(path.join(skillsDir, d, 'SKILL.md'))
+    );
+    expect(skills.length).toBeGreaterThanOrEqual(5);
+    expect(fs.existsSync(path.join(root, 'CODEX-HANDOFF.md'))).toBe(true);
+  });
+
   it('FreeLLMAPI provider wiring (open-source free gateway)', async () => {
     expect(freellmapiEnabled()).toBe(false);
     process.env.HAH_MODEL_PROVIDER = 'lotf';

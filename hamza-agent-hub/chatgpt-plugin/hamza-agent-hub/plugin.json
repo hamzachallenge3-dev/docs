@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "name": "hamza-agent-hub",
+  "version": "1.1.0",
+  "description": "One plugin: hub-boss routes Desk + ECC68 + Forge + Tools13 with FreeLLMAPI and agent browse.",
+  "author": {
+    "name": "Hamza Loukili",
+    "url": "https://github.com/hamzachallenge3-dev"
+  },
+  "license": "MIT",
+  "keywords": ["agents", "mcp", "hub-boss", "ecc68", "freellmapi", "chatgpt"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json",
+  "extensions": {
+    "com.openai": {
+      "displayName": "Hamza Agent Hub",
+      "shortDescription": "Route work across 90+ specialist agents",
+      "longDescription": "Unified agent hub for ChatGPT and Codex with hub-boss routing, agent browse, FreeLLMAPI, Desk tools, ECC68, Forge, and Tools13.",
+      "category": "Productivity",
+      "defaultPrompt": [
+        "Browse all agents and recommend specialists for SEO + security.",
+        "Route with hub-boss: clean leads then SEO audit HTML.",
+        "Probe FreeLLMAPI and report if free models are ready."
+      ],
+      "brandColor": "#0B3D2E",
+      "logo": "./assets/logo.svg",
+      "websiteURL": "https://github.com/hamzachallenge3-dev/docs/tree/main/hamza-agent-hub",
+      "privacyPolicyURL": "https://github.com/hamzachallenge3-dev/docs/blob/main/hamza-agent-hub/chatgpt-plugin/hamza-agent-hub/PRIVACY.md",
+      "termsOfServiceURL": "https://github.com/hamzachallenge3-dev/docs/blob/main/hamza-agent-hub/chatgpt-plugin/hamza-agent-hub/TERMS.md"
+    }
+  }
+}

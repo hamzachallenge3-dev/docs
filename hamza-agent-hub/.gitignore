@@ -5,3 +5,11 @@ workspaces/
 .env
 *.sqlite
 *.sqlite-*
+
+__pycache__/
+*.pyc
+.venv/
+.env.*
+!.env.example
+
+.wrangler/

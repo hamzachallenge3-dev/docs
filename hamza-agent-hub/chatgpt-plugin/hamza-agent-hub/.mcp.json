@@ -1,12 +1,9 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
     "hamza-agent-hub": {
       "type": "streamable-http",
-      "url": "https://YOUR-PUBLIC-HOST/mcp",
-      "authentication": {
-        "type": "none"
-      },
-      "description": "Replace YOUR-PUBLIC-HOST with the HTTPS host running hamza-agent-hub (HAH_TRANSPORT=http). For portal submission, prefer OAuth or portal-supported auth — see docs/CHATGPT-STORE.md."
+      "url": "${HAH_MCP_URL}"
     }
   }
 }

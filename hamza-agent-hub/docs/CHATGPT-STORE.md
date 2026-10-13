@@ -1,75 +1,61 @@
-# ChatGPT + Codex plugin directory
+# ChatGPT and Codex directory readiness
 
-This repo ships a ChatGPT/Codex-ready package under:
+Release 1.2.0 is a private setup scaffold with tested source. It is **not yet approved or ready to upload publicly**.
 
-`chatgpt-plugin/hamza-agent-hub/`
+| Requirement | Status | Evidence or blocker |
+|---|---|---|
+| One installable plugin | Done | `hamza-agent-hub`; 92 agents in five packs; ecc68-lab remains a redirect |
+| Portable manifest + compatibility overlay | Done | Agent Plugins 1.0 root manifest; synchronized identity/version; subtitle ≤30 chars; three default prompts |
+| App binding | Blocked | `.app.example.json` is an unverified template, excluded from ZIP. Obtain a real technical app ID after private MCP connection; never invent one |
+| 25 annotated tools | Done locally | Real `tools/list` annotation audit; catalogs must match |
+| Resources and prompts | Done locally | `hub://roster`, `hub://capabilities`, `route_mission` |
+| Worker + Python origin | Done locally | Tested proxy and Python-to-Node integration; not deployed |
+| Always-on origin | Blocked | Needs an account-provisioned free host and private deployment secrets; Kaggle sleeps |
+| Auth for public users | Blocked | Capability-path deployment is private and single tenant; obtain accepted auth and tenant isolation for directory distribution |
+| Verified public MCP endpoint | Blocked | No live credential-free public `/mcp` endpoint verified; public pack fails closed |
+| Domain verification | Code done; live blocked | Challenge endpoints implemented. Needs portal token + authorized staging/production deployment |
+| Five positive + three negative test cases | Done locally | `tests/contracts.test.ts` through actual MCP client, not direct helper calls; see `VALIDATION.md` |
+| Live ChatGPT host cases | Blocked | Custom connection and portal access needed; local tests do not prove host acceptance |
+| Secret-free deterministic ZIP | Done | Allowlist pack, symlink/secret rejection, archive inspection tests |
+| Listing copy and logo | Prepared | Manifest and existing SVG; policy/terms point at this PR branch. Use stable release URLs after merge |
+| Demo recording | Script prepared; recording blocked | Needs live private connection and a recording environment; script below |
+| Verified identity / portal upload / review / publish | Blocked | Requires developer portal identity and accepted endpoint; no submission performed |
 
-## What you get
+## Private connection and scaffold
 
-| Piece | Path |
-|---|---|
-| Codex / ChatGPT manifest | `.codex-plugin/plugin.json` |
-| Portable manifest | `plugin.json` |
-| MCP pointer | `.mcp.json` / `mcp.json` |
-| Skills | `skills/*/SKILL.md` |
-| Logo | `assets/logo.svg` |
-| Pack script | `scripts/pack-chatgpt-plugin.sh` |
-| Codex paste prompt | `CODEX-HANDOFF.md` |
+See `../deploy/README.md`. Private URL shape:
 
-## Strengthenments already in the MCP server
+`https://hub.imdifferent01.com/<HUB_SECRET>/mcp`
 
-- Tool annotations: `readOnlyHint`, `openWorldHint`, `destructiveHint` on every tool
-- Public `GET /healthz`
-- Domain verification: `GET /.well-known/openai-apps-challenge` (set `HAH_OPENAI_APPS_CHALLENGE`)
-- FreeLLMAPI + agent browse + hub-boss full roster
-
-## Local pack
+Set `HAH_MCP_URL` privately in clients supporting environment substitution. The archive's `${HAH_MCP_URL}` is a setup placeholder, not a verified endpoint. For a ChatGPT custom connection, configure the private URL directly in the connection UI; do not put it in a public artifact. If using portal auth type “none” with the path capability for a private connection, the secret path is still a credential. Host acceptance has not been tested. Public auth must be reviewed separately.
 
 ```bash
-cd hamza-agent-hub
-./scripts/pack-chatgpt-plugin.sh
-# → chatgpt-plugin/release/hamza-agent-hub-chatgpt-plugin.zip
+npm run pack:chatgpt
+# chatgpt-plugin/release/hamza-agent-hub-chatgpt-plugin.zip
+# Explicitly marked SETUP-REQUIRED; no app binding or credential inside.
 ```
 
-Full Codex brief: [`../CODEX-HANDOFF.md`](../CODEX-HANDOFF.md)
+For a **public** export, first obtain and verify a credential-free HTTPS `/mcp` endpoint, compatible auth, privacy policy, and tenant isolation. Set `HAH_PUBLIC_MCP_URL` and `HAH_PUBLIC_ENDPOINT_VERIFIED=1` privately, then run `npm run pack:chatgpt -- --public`. The script refuses path capabilities, queries, userinfo, and unverified URLs. This operator attestation is not a substitute for live ChatGPT and portal review. Never pass `HUB_SECRET` as a publish-time public endpoint substitution.
 
-## Test in ChatGPT (Developer / Work mode)
+The personal/workspace `.app.example.json` remains outside every release ZIP. If the portal supplies a verified app binding, keep that in a separate private install copy; public packages exclude `.app.json` and all apps declarations.
 
-1. Deploy MCP over HTTPS (`HAH_TRANSPORT=http`, reverse proxy TLS).
-2. ChatGPT → Plugins → Add custom MCP server → `https://YOUR-HOST/mcp`.
-3. Copy the `plugin_asdk_app…` id into `.app.json`.
-4. Install from your local marketplace or upload the ZIP in the Platform Plugins portal.
-5. Or paste `CODEX-HANDOFF.md` into **Codex in ChatGPT** and ask it to finish store packaging.
+## Review test cases
 
-## Public directory submission
+Positive: health returns 92 agents; SEO browse includes the specialist; security routing chooses `ecc-security-reviewer`; supplied HTML receives an SEO score; duplicate email input produces one lead.
 
-Portal: https://platform.openai.com/plugins  
-Docs: https://developers.openai.com/plugins/deploy/submission
+Negative: unknown agent returns `isError`; missing task returns `isError`; unavailable FreeLLMAPI returns `isError` without invented success. Additional checks cover unsafe paths, symlinks, lookalike origins, missing auth, rate limits, and bounded retries.
 
-Checklist:
+Repeat these through the live ChatGPT connection before submission. Record model readiness truthfully: offline heuristics produce scaffolds, not completed specialist reviews. Unsupported Tools13 integrations report BLOCKED and manual install hints; local alternatives are labeled as alternatives to upstream tools.
 
-1. Verified developer identity
-2. Upload ZIP from `pack-chatgpt-plugin.sh`
-3. Connect production HTTPS MCP + domain challenge token
-4. Fix scan findings (annotations already set)
-5. Provide 5 positive + 3 negative test cases (see below)
-6. Demo recording + release notes
-7. Submit → after approval → Publish
+## Demo recording script (60–90 seconds)
 
-### Positive test cases
+1. Start with the plugin name and show all five packs with agent browse.
+2. Ask in Arabic: “تنظيف البريد ثم تحسين محركات البحث ثم مراجعة أمان”. Show specialist decomposition.
+3. Clean a duplicate **synthetic** email list and audit supplied demo HTML.
+4. Queue `hub-boss`; poll status and show actual child task IDs and evidence. Say explicitly if the live model is unavailable and the output is an offline scaffold.
+5. Show a rejected invalid agent and sanitized edge-health response.
+6. Finish with privacy/terms and the real limitations: no paid calls, no automated posting, unsupported upstream runners require setup.
 
-1. `hub_health` → ok true, agents ≥ 92  
-2. `hub_agent_browse` query `SEO` → includes `tool13-seo-audit`  
-3. `hub_boss_route` task security login.py → primary `ecc-security-reviewer`  
-4. `seo_audit_html` with sample HTML → score object  
-5. `clean_leads` with duplicate emails → deduped count  
+Hide the connector URL, browser address bar, developer tools and logs. Use synthetic data only.
 
-### Negative test cases
-
-1. `run_agent` unknown `agent_id` → error  
-2. `task_status` fake id → not found  
-3. `hub_freellmapi_chat` when gateway down → clear error (no fake success)
-
-## Auth note
-
-The ChatGPT submission portal prefers OAuth / none for MCP connect. Lab Bearer (`HAH_AUTH_TOKEN`) works for private HTTPS installs; for public directory you may need to put the gateway behind an OAuth-capable proxy or OpenAI-supported auth. See portal MCP authentication reference.
+Official guidance: https://developers.openai.com/plugins/build/plugins and https://developers.openai.com/plugins/deploy/submission . Review the current portal requirements before upload; this PR does not claim public approval.

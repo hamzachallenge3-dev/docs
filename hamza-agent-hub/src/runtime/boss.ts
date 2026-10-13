@@ -14,7 +14,7 @@ export interface HubPlan {
 
 /** Extra keyword boosts — boss still scores EVERY agent from the full roster. */
 const BOOSTS: Array<{ match: RegExp; agent: string; weight: number }> = [
-  { match: /seo|meta description|canonical|open.?graph|json-?ld/i, agent: 'tool13-seo-audit', weight: 20 },
+  { match: /تحسين محركات البحث|سيو|seo|meta description|canonical|open.?graph|json-?ld/i, agent: 'tool13-seo-audit', weight: 20 },
   { match: /lapian|film pack|video frame|ffmpeg|subtitle/i, agent: 'tool13-lapian-notes', weight: 20 },
   { match: /nanomuse|nano.?muse/i, agent: 'tool13-nanomuse', weight: 16 },
   { match: /\bn8n\b|workflow library/i, agent: 'tool13-n8n-library', weight: 16 },
@@ -28,8 +28,8 @@ const BOOSTS: Array<{ match: RegExp; agent: string; weight: number }> = [
   { match: /inbox|lead triage|بريد/i, agent: 'desk-inbox-to-lead', weight: 14 },
   { match: /weekly report|تقرير أسبوعي/i, agent: 'desk-weekly-report', weight: 14 },
   { match: /meeting|action items|محضر|اجتماع/i, agent: 'desk-meeting-to-action', weight: 14 },
-  { match: /clean leads|dedupe email/i, agent: 'desk-lead-cleaner', weight: 14 },
-  { match: /security|sql injection|xss|أمن/i, agent: 'ecc-security-reviewer', weight: 16 },
+  { match: /تنظيف العملاء|تنظيف البريد|إزالة التكرار|clean leads|dedupe email/i, agent: 'desk-lead-cleaner', weight: 20 },
+  { match: /أمان|حماية|ثغرات|security|sql injection|xss|أمن/i, agent: 'ecc-security-reviewer', weight: 16 },
   { match: /python|\.py\b|django|fastapi/i, agent: 'ecc-python-reviewer', weight: 12 },
   { match: /typescript|\.ts\b|tsx/i, agent: 'ecc-typescript-reviewer', weight: 12 },
   { match: /react|jsx|next\.js/i, agent: 'ecc-react-reviewer', weight: 12 },
@@ -85,6 +85,11 @@ export function planWithBoss(task: string): HubPlan {
   const top = ranked[0];
   const primary = top && top.score > 0 ? top.agent.id : 'ecc-planner';
   const pack = top && top.score > 0 ? top.agent.pack : 'ecc68';
+  const clauses = task.split(/\s+(?:then|and then|ثم|وبعدها)\s+|[;؛\n]+/i).map(s=>s.trim()).filter(Boolean);
+  const assignments = clauses.map(clause => {
+    const best = scoreAllAgents(clause)[0];
+    return {agent_id:best && best.score>0 ? best.agent.id : 'ecc-planner', pack:best && best.score>0 ? best.agent.pack : 'ecc68', subtask:clause};
+  });
   const secondary = ranked
     .filter((r) => r.agent.id !== primary && r.score > 0)
     .slice(0, 3)
@@ -106,7 +111,7 @@ export function planWithBoss(task: string): HubPlan {
       top && top.score > 0
         ? `Boss scored all ${roster.length} agents; top=${primary}@${pack}(${top.score})`
         : `Boss scored all ${roster.length} agents; no strong match → ecc-planner`,
-    decomposition: [
+    decomposition: clauses.length > 1 ? assignments : [
       {
         agent_id: primary,
         pack,

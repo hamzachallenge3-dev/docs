@@ -1,7 +1,10 @@
+import { tools13Capabilities } from '../packs/tools13/offline.js';
+import { planWithBoss } from '../runtime/boss.js';
+import { modelTool } from './schemas.js';
 import { config, modelConfigured } from '../config.js';
-import { redactSecrets } from '../security/redact.js';
 import {
   freellmapiChat,
+  probeFreellmapi,
   freellmapiEnabled,
   freellmapiStatusSummary,
 } from './freellmapi.js';
@@ -10,6 +13,9 @@ export interface ModelMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   name?: string;
+  tool_call_id?: string;
+  tool_calls?: Array<{id:string;type:'function';function:{name:string;arguments:string}}>;
+
 }
 
 export function modelStatus() {
@@ -31,13 +37,13 @@ export function modelStatus() {
   }
   return {
     configured: true,
-    readiness: 'ready' as const,
+    readiness: 'configured_unverified' as const,
     reason: freellmapiEnabled()
       ? 'FreeLLMAPI (open-source free gateway) configured'
       : 'OpenAI-compatible free endpoint configured',
     provider: freellmapiEnabled() ? 'freellmapi' : 'openai_compatible',
     model: config.modelName,
-    base_url: config.modelUrl,
+    base_url: '[configured endpoint]',
     freellmapi,
     profiles: {
       glm_lab: Boolean(config.modelProfiles.glm_lab),
@@ -53,6 +59,7 @@ export async function callModel(opts: {
   messages: ModelMessage[];
   tools: string[];
   agentId: string;
+  signal?: AbortSignal;
 }): Promise<{
   content: string;
   tool_calls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
@@ -60,13 +67,27 @@ export async function callModel(opts: {
   routed_via?: string | null;
   model?: string;
 }> {
-  if (!modelConfigured()) return heuristic(opts);
+  // Auto-detect only the local free gateway, never a paid or unrelated provider.
+  if (!modelConfigured()) {
+    if (process.env.HAH_AUTO_FREELLMAPI !== '0' && await localGatewayReady()) {
+      try {
+        const r = await freellmapiChat({...opts});
+        return {...r, provider:'freellmapi'};
+      } catch {
+        opts.signal?.throwIfAborted();
+        cachedProbe = {expires:Date.now()+15_000,ready:false};
+        return heuristic(opts);
+      }
+    }
+    return heuristic(opts);
+  }
 
   if (freellmapiEnabled()) {
     const r = await freellmapiChat({
       system: opts.system,
       messages: opts.messages,
       tools: opts.tools,
+      signal: opts.signal,
     });
     return {
       provider: 'freellmapi',
@@ -80,20 +101,18 @@ export async function callModel(opts: {
   const body = {
     model: config.modelName,
     messages: [{ role: 'system', content: opts.system }, ...opts.messages],
-    tools: opts.tools.map((name) => ({
-      type: 'function',
-      function: { name, description: name, parameters: { type: 'object', properties: {} } },
-    })),
+    tools: opts.tools.map(modelTool),
     temperature: 0.2,
   };
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (config.modelApiKey) headers.Authorization = `Bearer ${config.modelApiKey}`;
   const res = await fetch(config.modelUrl.replace(/\/$/, '') + '/chat/completions', {
+    signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
     method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`model HTTP ${res.status}: ${redactSecrets(await res.text()).slice(0, 400)}`);
+  if (!res.ok) throw new Error(`model HTTP ${res.status}`);
   const json = (await res.json()) as {
     choices?: Array<{
       message?: {
@@ -128,6 +147,10 @@ function heuristic(opts: {
   tool_calls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
   provider: 'heuristic';
 } {
+  const capability = tools13Capabilities().find(c=>`tool13-${c.id}` === opts.agentId);
+  if (capability?.status === 'BLOCKED' && opts.agentId !== 'tool13-lapian-notes') {
+    return {provider:'heuristic',content:JSON.stringify({agent_id:opts.agentId,...capability}),tool_calls:[]};
+  }
   const tools = new Set(opts.tools);
   const step = opts.messages.filter((m) => m.role === 'tool').length;
   const lastUser = [...opts.messages].reverse().find((m) => m.role === 'user')?.content || '';
@@ -139,7 +162,13 @@ function heuristic(opts: {
       tool_calls: [{ id: 'h0', name: 'hub_full_roster', arguments: {} }],
     };
   }
-  if (opts.agentId === 'hub-boss' && step === 1 && tools.has('workspace_write')) {
+  if (opts.agentId === 'hub-boss' && step === 1 && tools.has('dispatch_agent')) {
+    const original = lastUser.split('Original task:\n')[1]?.split('\n\n')[0] ?? lastUser;
+    const plan = planWithBoss(original);
+    return {provider:'heuristic',content:'Queueing specialist assignments; offline analysis is a scaffold.',
+      tool_calls:plan.decomposition.slice(0,4).map((d,i)=>({id:`dispatch-${i}`,name:'dispatch_agent',arguments:{agent_id:d.agent_id,subtask:d.subtask}}))};
+  }
+  if (opts.agentId === 'hub-boss' && step >= 2 && !opts.messages.some(m=>m.role==='tool' && m.name==='workspace_write') && tools.has('workspace_write')) {
     return {
       provider: 'heuristic',
       content: '',
@@ -279,7 +308,7 @@ function heuristic(opts: {
     };
   }
 
-  if (step >= 1 && tools.has('workspace_write')) {
+  if (step === 1 && tools.has('workspace_write')) {
     return {
       provider: 'heuristic',
       content: '',
@@ -309,9 +338,18 @@ function heuristic(opts: {
     provider: 'heuristic',
     content: JSON.stringify({
       agent_id: opts.agentId,
-      summary: `Completed ${opts.agentId} via heuristic path`,
+      summary: `Offline scaffold for ${opts.agentId}; specialist analysis requires a live model`,
       task: lastUser.slice(0, 200),
     }, null, 2),
     tool_calls: [],
   };
+}
+
+let cachedProbe: { expires: number; ready: boolean } | undefined;
+async function localGatewayReady() {
+  if (cachedProbe && Date.now() < cachedProbe.expires) return cachedProbe.ready;
+  const result = await probeFreellmapi(800);
+  const ready = result.ok && (result.models_count ?? 0) > 0;
+  cachedProbe = {expires: Date.now() + 15_000, ready};
+  return ready;
 }

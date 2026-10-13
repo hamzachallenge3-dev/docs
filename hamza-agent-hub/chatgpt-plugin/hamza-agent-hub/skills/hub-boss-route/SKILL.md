@@ -14,3 +14,8 @@ When the user has a mission that may need several specialists:
 
 Never invent agent IDs. Prefer IDs returned by `hub_full_roster` or `hub_agent_browse`.
 Do not claim production GLM/Headroom changes. Do not spend money.
+
+## English and Arabic use
+
+Respond in the user’s language (English or Arabic). / أجب بلغة المستخدم العربية أو الإنجليزية.
+Report unavailable tools as BLOCKED with setup hints. Heuristic output is an offline scaffold, not completed specialist analysis. Ask before sending messages or using external paid services.

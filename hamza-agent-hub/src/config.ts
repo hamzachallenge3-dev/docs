@@ -8,7 +8,7 @@ function envInt(name: string, fallback: number): number {
   const v = process.env[name];
   if (!v) return fallback;
   const n = Number.parseInt(v, 10);
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 1_000_000) : fallback;
 }
 
 export const config = {
@@ -25,8 +25,11 @@ export const config = {
     return process.env.HAH_DB_PATH || path.join(ROOT, 'data', 'hamza-hub.sqlite');
   },
   get concurrency() {
-    return envInt('HAH_CONCURRENCY', 2);
+    return Math.min(envInt('HAH_CONCURRENCY', 2), 32);
   },
+  get maxPending() { return envInt('HAH_MAX_PENDING', 1000); },
+  get maxAttempts() { return Math.min(envInt('HAH_MAX_ATTEMPTS', 3), 10); },
+  get rateLimit() { return envInt('HAH_RATE_LIMIT', 120); },
   get maxSteps() {
     return envInt('HAH_MAX_STEPS', 12);
   },

@@ -1,6 +1,6 @@
 {
   "name": "hamza-agent-hub",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "One MCP plugin for Cursor + ChatGPT/Codex store: Desk + ECC68 + Forge + Tools13 + browse + FreeLLMAPI",
   "main": "dist/index.js",
   "directories": {
@@ -12,7 +12,9 @@
     "start": "node --experimental-sqlite dist/index.js",
     "test": "node --experimental-sqlite --import tsx node_modules/vitest/vitest.mjs run",
     "pack:chatgpt": "bash ./scripts/pack-chatgpt-plugin.sh",
-    "dev": "HAH_TRANSPORT=stdio npx tsx --experimental-sqlite src/index.ts"
+    "dev": "HAH_TRANSPORT=stdio npx tsx --experimental-sqlite src/index.ts",
+    "test:python": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "check": "npm run build && npm test && npm run test:python && python3 packs/tools13/scripts/verify_bundle.py && npm run pack:chatgpt"
   },
   "keywords": [],
   "author": "",

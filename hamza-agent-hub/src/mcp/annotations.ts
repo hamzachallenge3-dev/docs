@@ -18,7 +18,7 @@ export const RO_OPEN: ToolAnnotations = {
 export const WRITE_LOCAL: ToolAnnotations = {
   readOnlyHint: false,
   destructiveHint: false,
-  openWorldHint: false,
+  openWorldHint: true, // Queued agents may call the configured free model gateway.
   idempotentHint: false,
 };
 

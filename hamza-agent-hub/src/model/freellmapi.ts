@@ -11,8 +11,8 @@
  * or HAH_USE_FREELLMAPI=1
  */
 
+import { modelTool } from './schemas.js';
 import { config } from '../config.js';
-import { redactSecrets } from '../security/redact.js';
 
 export const FREELLMAPI_DEFAULT_URL = 'http://127.0.0.1:3001/v1';
 export const FREELLMAPI_DEFAULT_MODEL = 'auto';
@@ -72,20 +72,17 @@ export async function probeFreellmapi(timeoutMs = 4000): Promise<FreellmapiProbe
   try {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
-    const res = await fetch(`${base}/models`, { headers, signal: ctrl.signal });
-    clearTimeout(t);
+    const res = await fetch(`${base}/models`, { headers, signal: AbortSignal.timeout(timeoutMs) });
     const latency = Date.now() - started;
     if (!res.ok) {
       return {
         ok: false,
         provider: 'freellmapi',
-        base_url: base,
+        base_url: '[configured endpoint]',
         model,
         key_configured: Boolean(key),
         latency_ms: latency,
-        error: `HTTP ${res.status}: ${redactSecrets(await res.text()).slice(0, 200)}`,
+        error: `HTTP ${res.status}`,
         upstream: FREELLMAPI_UPSTREAM,
         hint,
       };
@@ -95,7 +92,7 @@ export async function probeFreellmapi(timeoutMs = 4000): Promise<FreellmapiProbe
     return {
       ok: true,
       provider: 'freellmapi',
-      base_url: base,
+      base_url: '[configured endpoint]',
       model,
       key_configured: Boolean(key),
       models_count: ids.length,
@@ -110,11 +107,11 @@ export async function probeFreellmapi(timeoutMs = 4000): Promise<FreellmapiProbe
     return {
       ok: false,
       provider: 'freellmapi',
-      base_url: base,
+      base_url: '[configured endpoint]',
       model,
       key_configured: Boolean(key),
       latency_ms: Date.now() - started,
-      error: err instanceof Error ? err.message : String(err),
+      error: 'FreeLLMAPI unavailable / النموذج غير متاح',
       upstream: FREELLMAPI_UPSTREAM,
       hint,
     };
@@ -123,9 +120,10 @@ export async function probeFreellmapi(timeoutMs = 4000): Promise<FreellmapiProbe
 
 export async function freellmapiChat(opts: {
   system: string;
-  messages: Array<{ role: string; content: string; name?: string }>;
+  messages: Array<{ role: string; content: string; name?: string; tool_call_id?:string; tool_calls?:unknown[] }>;
   tools: string[];
   model?: string;
+  signal?: AbortSignal;
 }): Promise<{
   content: string;
   tool_calls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
@@ -139,27 +137,21 @@ export async function freellmapiChat(opts: {
   const body = {
     model,
     messages: [{ role: 'system', content: opts.system }, ...opts.messages],
-    tools: opts.tools.map((name) => ({
-      type: 'function',
-      function: {
-        name,
-        description: name,
-        parameters: { type: 'object', properties: {} },
-      },
-    })),
+    tools: opts.tools.map(modelTool),
     temperature: 0.2,
   };
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (key) headers.Authorization = `Bearer ${key}`;
 
   const res = await fetch(`${base}/chat/completions`, {
+    signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
     method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     throw new Error(
-      `FreeLLMAPI HTTP ${res.status}: ${redactSecrets(await res.text()).slice(0, 400)}`
+      `FreeLLMAPI HTTP ${res.status}`
     );
   }
   const routed = res.headers.get('x-routed-via');
@@ -195,10 +187,10 @@ export function freellmapiStatusSummary() {
   return {
     provider: 'freellmapi' as const,
     enabled: freellmapiEnabled(),
-    base_url: freellmapiBaseUrl(),
+    base_url: '[configured endpoint]',
     model: freellmapiModel(),
     key_configured: Boolean(freellmapiApiKey()),
-    hub_model_url: config.modelUrl || (freellmapiEnabled() ? freellmapiBaseUrl() : ''),
+    hub_model_configured: Boolean(config.modelUrl),
     upstream: FREELLMAPI_UPSTREAM,
     license: 'MIT open-source self-hosted free-tier aggregator',
   };

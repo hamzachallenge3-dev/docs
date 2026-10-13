@@ -35,7 +35,7 @@ describe('hamza agent hub', () => {
   afterEach(async () => {
     const { stopQueue } = await import('../src/runtime/queue.js');
     const { closeDb } = await import('../src/storage/db.js');
-    stopQueue();
+    await stopQueue();
     closeDb();
   });
 

@@ -131,3 +131,9 @@ npm test
 python3 packs/tools13/scripts/verify_bundle.py
 ./scripts/pack-chatgpt-plugin.sh
 ```
+
+## Release 1.2.0 strengthening
+
+The hub now has a Cloudflare edge proxy and Python entrypoint sharing the same Node roster, stateless authenticated HTTP MCP, bounded retries/dead letters, terminal cancellation, safe workspace paths, five additional tools, MCP resources/prompts, and deterministic secret-free packaging. Boss dispatch queues real specialist child tasks; heuristic completion is an offline scaffold.
+
+Read [deployment](deploy/README.md), [store readiness](docs/CHATGPT-STORE.md), and [validation](docs/VALIDATION.md). Public upload remains blocked until a verified, appropriately authenticated public endpoint and portal review exist. The rebuilt ZIP is a private setup scaffold.

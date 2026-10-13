@@ -24,7 +24,7 @@ node --experimental-sqlite dist/index.js
 
 ```bash
 ECC68_TRANSPORT=http ECC68_AUTH_TOKEN=dev-token ./scripts/start.sh
-curl -s -H "Authorization: Bearer dev-token" http://127.0.0.1:8787/healthz
+curl -s -H "Authorization: Bearer ${ECC68_AUTH_TOKEN}" http://127.0.0.1:8787/healthz
 ```
 
 ## نموذج مجاني

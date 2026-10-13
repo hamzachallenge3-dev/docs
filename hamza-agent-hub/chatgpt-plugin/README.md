@@ -1,6 +1,6 @@
 # ChatGPT / Codex plugin package
 
-Folder `hamza-agent-hub/` is the uploadable plugin for the **ChatGPT + Codex Plugin Directory**.
+Folder `hamza-agent-hub/` contains the private setup scaffold for Hamza Agent Hub. The release ZIP is not ready for public directory upload; see the current done/blocked matrix below.
 
 ## Pack
 

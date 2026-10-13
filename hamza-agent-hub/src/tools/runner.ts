@@ -1,3 +1,4 @@
+import { tools13Capabilities, validateWorkflow, compactContext, extractLinks } from '../packs/tools13/offline.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { assertToolAllowed, resolveSafePath } from '../security/workspace.js';
@@ -10,7 +11,7 @@ import { browseAgentDetail, browseEverything } from '../runtime/browse.js';
 import { freellmapiChat, freellmapiStatusSummary, probeFreellmapi } from '../model/freellmapi.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
 import { seoAuditHtml } from '../packs/tools13/seo.js';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { ROOT } from '../config.js';
 
 export interface ToolCall {
@@ -21,11 +22,17 @@ export interface ToolCall {
 export async function runTool(
   allowed: string[],
   workspaceRoot: string,
-  call: ToolCall
+  call: ToolCall,
+  signal?: AbortSignal,
+  context?: {taskId:string;workspaceId:string}
 ): Promise<{ ok: boolean; name: string; output: string; artifact?: string }> {
   try {
     assertToolAllowed(allowed, call.name);
     switch (call.name) {
+      case 'hub_tools13_capabilities': return {ok:true,name:call.name,output:redactSecrets(tools13Capabilities())};
+      case 'n8n_workflow_validate': return {ok:true,name:call.name,output:redactSecrets(validateWorkflow(call.arguments.workflow))};
+      case 'context_compact': return {ok:true,name:call.name,output:redactSecrets(compactContext(String(call.arguments.text ?? ''),Number(call.arguments.max_lines ?? 200)))};
+      case 'html_extract_links': return {ok:true,name:call.name,output:redactSecrets(extractLinks(String(call.arguments.html ?? '')))};
       case 'hub_list_packs':
         return { ok: true, name: call.name, output: JSON.stringify(PACKS, null, 2) };
       case 'hub_list_agents': {
@@ -65,7 +72,7 @@ export async function runTool(
           return {
             ok: false,
             name: call.name,
-            output: err instanceof Error ? err.message : String(err),
+            output: redactSecrets(err instanceof Error ? err.message : String(err)),
           };
         }
       }
@@ -139,20 +146,18 @@ export async function runTool(
         }
         const interval = Number(call.arguments.interval || 2);
         const maxFrames = Number(call.arguments.max_frames || 36);
-        const cp = spawnSync(
-          'python3',
-          [script, videoAbs, '--out', outAbs, '--interval', String(interval), '--max-frames', String(maxFrames)],
-          { encoding: 'utf8', timeout: 120_000 }
-        );
-        const text = (cp.stdout || cp.stderr || '').trim();
-        if (cp.status !== 0) {
-          return {
-            ok: false,
-            name: call.name,
-            output: text || `film_pack failed (is ffmpeg installed?): ${cp.error?.message || ''}`,
-          };
-        }
-        return { ok: true, name: call.name, output: text, artifact: outRel };
+        if (!Number.isFinite(interval) || interval < 0.1 || interval > 3600 || !Number.isInteger(maxFrames) || maxFrames < 1 || maxFrames > 120) throw new Error('invalid frame limits');
+        const output = await new Promise<string>((resolve, reject) => {
+          const child = spawn('python3', [script, videoAbs, '--out', outAbs, '--interval', String(interval), '--max-frames', String(maxFrames)], {
+            signal, timeout:120_000, stdio:['ignore','pipe','pipe']
+          });
+          let text = '';
+          const collect = (chunk: Buffer) => { text = (text + chunk.toString()).slice(-64_000); };
+          child.stdout.on('data', collect); child.stderr.on('data', collect);
+          child.on('error', reject);
+          child.on('close', code => code === 0 ? resolve(text) : reject(new Error('film pack failed; install ffmpeg/ffprobe')));
+        });
+        return {ok:true,name:call.name,output:redactSecrets(output),artifact:outRel};
       }
       case 'clean_leads':
         return {
@@ -217,28 +222,34 @@ export async function runTool(
         if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
           return { ok: false, name: call.name, output: 'file not found' };
         }
+        if (fs.statSync(abs).size > 1_048_576) throw new Error('file too large');
         return { ok: true, name: call.name, output: redactSecrets(fs.readFileSync(abs, 'utf8')) };
       }
       case 'workspace_write': {
         const rel = String(call.arguments.path ?? '');
         const content = String(call.arguments.content ?? '');
+        if (Buffer.byteLength(content) > 1_048_576) throw new Error('content too large');
         const abs = resolveSafePath(workspaceRoot, rel);
         fs.mkdirSync(path.dirname(abs), { recursive: true });
-        fs.writeFileSync(abs, content, 'utf8');
+        fs.writeFileSync(abs, redactSecrets(content), 'utf8');
         return { ok: true, name: call.name, output: `wrote ${rel}`, artifact: rel };
       }
       case 'workspace_grep': {
         const pattern = String(call.arguments.pattern ?? '');
         const rel = String(call.arguments.path ?? '.');
         const abs = resolveSafePath(workspaceRoot, rel);
-        const re = new RegExp(pattern, 'i');
+        if (pattern.length > 200) throw new Error('search pattern too long');
+        // Literal matching avoids catastrophic regex backtracking from model input.
+        const re = {test: (line: string) => line.toLowerCase().includes(pattern.toLowerCase())};
         const hits: string[] = [];
         const walk = (dir: string, base: string) => {
           for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-            const full = path.join(dir, ent.name);
+            const full = resolveSafePath(workspaceRoot, path.relative(workspaceRoot, path.join(dir, ent.name)));
+            if (hits.length >= 40) return;
             const relPath = path.join(base, ent.name);
             if (ent.isDirectory()) walk(full, relPath);
             else if (ent.isFile()) {
+              if (fs.statSync(full).size > 1_048_576) continue;
               const lines = fs.readFileSync(full, 'utf8').split('\n');
               lines.forEach((line, i) => {
                 if (re.test(line) && hits.length < 40) hits.push(`${relPath}:${i + 1}:${line.slice(0, 160)}`);
@@ -256,18 +267,25 @@ export async function runTool(
               });
           }
         }
-        return { ok: true, name: call.name, output: hits.join('\n') || '(no matches)' };
+        return { ok: true, name: call.name, output: redactSecrets(hits.join('\n') || '(no matches)') };
       }
       case 'dispatch_agent': {
         const agentId = String(call.arguments.agent_id || '');
         const subtask = String(call.arguments.subtask || '');
         const target = listAgents().find((a) => a.id === agentId);
         if (!target) return { ok: false, name: call.name, output: `unknown agent ${agentId}` };
-        const assignment = { agent_id: agentId, pack: target.pack, subtask, at: Date.now() };
+        if (['hub-boss','ecc-chief-of-staff'].includes(agentId)) throw new Error('recursive orchestrator dispatch blocked');
+        if (!context) throw new Error('dispatch requires task context');
+        const {enqueueAgentTask} = await import('../runtime/queue.js');
+        const {createHash} = await import('node:crypto');
+        const fingerprint = createHash('sha256').update(subtask).digest('hex').slice(0,24);
+        const child = enqueueAgentTask({agent_id:agentId,task:subtask,workspace_id:context.workspaceId,
+          idempotency_key:`${context.taskId}:${agentId}:${fingerprint}`});
+        const assignment = {agent_id:agentId, pack:target.pack, child_task_id:child.task_id, status:child.task.status, subtask};
         const rel = `artifacts/dispatch-${agentId}.json`;
-        fs.mkdirSync(path.join(workspaceRoot, 'artifacts'), { recursive: true });
-        fs.writeFileSync(path.join(workspaceRoot, rel), JSON.stringify(assignment, null, 2));
-        return { ok: true, name: call.name, output: JSON.stringify(assignment), artifact: rel };
+        fs.mkdirSync(resolveSafePath(workspaceRoot,'artifacts'),{recursive:true});
+        fs.writeFileSync(resolveSafePath(workspaceRoot,rel),redactSecrets(assignment));
+        return {ok:true,name:call.name,output:redactSecrets(assignment),artifact:rel};
       }
       default:
         return { ok: false, name: call.name, output: `unknown tool ${call.name}` };
@@ -276,7 +294,7 @@ export async function runTool(
     return {
       ok: false,
       name: call.name,
-      output: err instanceof Error ? err.message : String(err),
+      output: redactSecrets(err instanceof Error ? err.message : String(err)),
     };
   }
 }

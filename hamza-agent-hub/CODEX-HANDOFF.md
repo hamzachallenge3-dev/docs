@@ -339,3 +339,7 @@ Then implement **P0** (Worker + `hub.py` path) or, if those sources live outside
 | FreeLLMAPI notes | `hamza-agent-hub/docs/FREELLMAPI.md` |
 | OpenAI plugin packaging | https://developers.openai.com/plugins/build/plugins |
 | OpenAI plugin submission | https://developers.openai.com/plugins/deploy/submission |
+
+## 11. Codex implementation update — 1.2.0
+
+The original contract above remains the acceptance record. Implementation and test evidence now live in `docs/VALIDATION.md`; the current done/blocked matrix is `docs/CHATGPT-STORE.md`. The Worker/Python production-path gap is implemented as source with local integration tests. Public deployment, live domain verification, app binding, demo capture and portal submission remain blocked on private infrastructure/account inputs. No production mutations or paid calls occurred.

@@ -36,8 +36,8 @@ export HAH_FREELLMAPI_KEY='freellmapi-…'
 run_agent(
   agent_id="hub-freellmapi",
   task="Probe FreeLLMAPI and report connection status",
-  workspace_id="freellmapi",
-  idempotency_key="freellmapi-1"
+  provider: "freellmapi",
+  base_url: "[configured endpoint]"
 )
 ```
 

@@ -5,6 +5,11 @@ import { scoreAllAgents } from './boss.js';
 /** MCP tools exposed by this one plugin (stdio/HTTP surface). */
 export const MCP_SURFACE_TOOLS = [
   'hub_health',
+  'hub_edge_health',
+  'hub_tools13_capabilities',
+  'n8n_workflow_validate',
+  'context_compact',
+  'html_extract_links',
   'hub_list_packs',
   'hub_list_agents',
   'hub_full_roster',

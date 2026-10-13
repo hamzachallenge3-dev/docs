@@ -8,13 +8,17 @@ import {
   insertTask,
   requeueInterrupted,
   updateTask,
+  taskQueueSummary,
+  getDb,
   type TaskRow,
 } from '../storage/db.js';
 import { getAgent } from './registry.js';
 import { ensureWorkspace } from '../security/workspace.js';
+import { redactSecrets } from '../security/redact.js';
 import { executeTask } from './executor.js';
 
 const abortControllers = new Map<string, AbortController>();
+const active = new Set<Promise<void>>();
 let running = 0;
 let pumpTimer: NodeJS.Timeout | null = null;
 let started = false;
@@ -27,12 +31,12 @@ export function startQueue(): void {
   void pump();
 }
 
-export function stopQueue(): void {
+export async function stopQueue(): Promise<void> {
   if (pumpTimer) clearInterval(pumpTimer);
   pumpTimer = null;
   started = false;
-  for (const [, ac] of abortControllers) ac.abort();
-  abortControllers.clear();
+  for (const ac of abortControllers.values()) ac.abort();
+  await Promise.allSettled([...active]);
 }
 
 export function enqueueAgentTask(input: {
@@ -43,14 +47,20 @@ export function enqueueAgentTask(input: {
 }): { task_id: string; reused: boolean; task: TaskRow } {
   const agent = getAgent(input.agent_id);
   if (!agent) throw new Error(`invalid agent_id: ${input.agent_id}`);
+  if (input.task.length > 100_000) throw new Error('task too large / المهمة طويلة جداً');
   if (!input.task?.trim()) throw new Error('task must be a non-empty string');
   if (!input.idempotency_key || input.idempotency_key.length < 4) {
     throw new Error('idempotency_key must be at least 4 characters');
   }
   ensureWorkspace(input.workspace_id);
   const existing = findByIdempotency(input.agent_id, input.workspace_id, input.idempotency_key);
-  if (existing) return { task_id: existing.id, reused: true, task: existing };
+  if (existing) {
+    if (existing.task !== input.task) throw new Error('idempotency key already used for another task');
+    return { task_id: existing.id, reused: true, task: existing };
+  }
 
+  const pending = getDb().prepare("SELECT count(*) AS count FROM tasks WHERE status IN ('queued','running')").get() as {count:number};
+  if (pending.count >= config.maxPending) throw new Error('queue full / قائمة الانتظار ممتلئة');
   const id = randomUUID();
   const now = Date.now();
   const task = insertTask({
@@ -80,7 +90,7 @@ export function enqueueAgentTask(input: {
 export function cancelTask(taskId: string): TaskRow {
   const task = getTask(taskId);
   if (!task) throw new Error(`task not found: ${taskId}`);
-  if (['completed', 'failed', 'cancelled'].includes(task.status)) return task;
+  if (['completed', 'failed', 'cancelled', 'dead_letter'].includes(task.status)) return task;
   abortControllers.get(taskId)?.abort();
   const updated = updateTask(taskId, {
     status: 'cancelled',
@@ -92,29 +102,38 @@ export function cancelTask(taskId: string): TaskRow {
 }
 
 async function pump(): Promise<void> {
-  while (running < config.concurrency) {
+  while (started && running < config.concurrency) {
     const next = claimNextQueued();
     if (!next) return;
     running += 1;
     const ac = new AbortController();
     abortControllers.set(next.id, ac);
-    void executeTask(next.id, ac.signal)
+    const timeout = setTimeout(() => ac.abort(new Error('task timeout')), config.taskTimeoutMs);
+    const job = executeTask(next.id, ac.signal)
       .catch((err) => {
+        if (getTask(next.id)?.status === 'cancelled') return;
+        const retry = (!ac.signal.aborted || !started) && (next.attempts ?? 0) < config.maxAttempts;
         updateTask(next.id, {
-          status: 'failed',
-          error: err instanceof Error ? err.message : String(err),
-          finished_at: Date.now(),
-          progress: 1,
+          status: retry ? 'queued' : 'dead_letter',
+          error: redactSecrets(err instanceof Error ? err.message : String(err)),
+          progress_message: retry ? 'retry scheduled' : 'dead letter: attempts exhausted or timeout',
+          available_at: Date.now() + Math.min(30_000, 500 * 2 ** (next.attempts ?? 1)),
+          finished_at: retry ? null : Date.now(),
+          progress: retry ? 0 : 1,
         });
+        appendEvent(next.id, retry ? 'retry' : 'dead_letter', { attempts: next.attempts });
       })
       .finally(() => {
+        clearTimeout(timeout);
         abortControllers.delete(next.id);
         running -= 1;
+        active.delete(job);
         void pump();
       });
+    active.add(job);
   }
 }
 
 export function queueStats() {
-  return { running, concurrency: config.concurrency };
+  return { running, concurrency: config.concurrency, max_attempts: config.maxAttempts, statuses: taskQueueSummary() };
 }

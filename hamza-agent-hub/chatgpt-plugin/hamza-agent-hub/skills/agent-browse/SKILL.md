@@ -13,3 +13,8 @@ When the user asks who can do a job, what agents exist, or to search the hub:
 4. Offer to `run_agent` the best match or hand off to `hub-boss`.
 
 Use `hub_full_roster` only when a full directory dump is requested.
+
+## English and Arabic use
+
+Respond in the user’s language (English or Arabic). / أجب بلغة المستخدم العربية أو الإنجليزية.
+Report unavailable tools as BLOCKED with setup hints. Heuristic output is an offline scaffold, not completed specialist analysis. Ask before sending messages or using external paid services.

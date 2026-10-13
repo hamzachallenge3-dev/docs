@@ -25,7 +25,7 @@
     "id": "hub-freellmapi",
     "pack": "hub",
     "category": "model_gateway",
-    "description": "Connects Hamza Agent Hub to FreeLLMAPI — open-source free OpenAI-compatible LLM gateway (auto-routing across free tiers).",
+    "description": "Connects Hamza Agent Hub to FreeLLMAPI \u2014 open-source free OpenAI-compatible LLM gateway (auto-routing across free tiers).",
     "tools": [
       "hub_freellmapi_status",
       "hub_freellmapi_chat",
@@ -232,6 +232,7 @@
     "category": "Automation",
     "description": "n8n Workflow Library \u2014 Private ChatGPT skill not archived; official workflows available by separate source fetch. No flow activated. Source: https://github.com/Zie619/n8n-workflows. Tested: PASS_PUBLIC_WORKFLOW_JSON_VALIDATION.",
     "tools": [
+      "n8n_workflow_validate",
       "hub_tools13_lookup",
       "workspace_write",
       "workspace_list"
@@ -283,6 +284,7 @@
     "category": "Web / Scraping",
     "description": "Scrapling \u2014 Requires additional packages; sample public fetch was verified. Source: https://github.com/D4Vinci/Scrapling. Tested: PASS_HTML_PARSER_AND_LIVE_HTTP_200.",
     "tools": [
+      "html_extract_links",
       "hub_tools13_lookup",
       "workspace_write",
       "workspace_list"
@@ -317,6 +319,7 @@
     "category": "AI / Context compression",
     "description": "Headroom \u2014 Local compression example retained FATAL in logs. Source: https://github.com/headroomlabs-ai/headroom. Tested: PASS_LOCAL_COMPRESSION.",
     "tools": [
+      "context_compact",
       "hub_tools13_lookup",
       "workspace_write",
       "workspace_list"

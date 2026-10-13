@@ -17,18 +17,21 @@ import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.j
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
 import { seoAuditHtml } from '../packs/tools13/seo.js';
+import { redactSecrets } from '../security/redact.js';
+import { edgeHealth } from './edge-health.js';
+import { tools13Capabilities, validateWorkflow, compactContext, extractLinks } from '../packs/tools13/offline.js';
 import { CANCEL, RO, RO_OPEN, WRITE_LOCAL } from './annotations.js';
 import fs from 'node:fs';
 
 function jsonText(data: unknown) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+  return { content: [{ type: 'text' as const, text: redactSecrets(data) }] };
 }
 
 export function createHamzaHubServer(): McpServer {
   startQueue();
   const server = new McpServer({
     name: 'hamza-agent-hub',
-    version: '1.1.0',
+    version: '1.2.0',
     title: 'Hamza Agent Hub',
   });
 
@@ -47,10 +50,11 @@ export function createHamzaHubServer(): McpServer {
         error = e instanceof Error ? e.message : String(e);
       }
       const model = modelStatus();
+      const probe = await probeFreellmapi(800);
       return jsonText({
         ok,
         service: 'hamza-agent-hub',
-        version: '1.1.0',
+        version: '1.2.0',
         chatgpt_plugin: true,
         packs: PACKS,
         agents: listAgents().length,
@@ -63,7 +67,8 @@ export function createHamzaHubServer(): McpServer {
         agent_browse: Boolean(getAgent('hub-agent-browse')?.tools.includes('hub_agent_browse')),
         hub_agents: listAgents('hub').length,
         freellmapi: freellmapiStatusSummary(),
-        freellmapi_live: freellmapiEnabled() && model.configured,
+        freellmapi_live: probe.ok && (probe.models_count ?? 0) > 0,
+        automatic_free_gateway: process.env.HAH_AUTO_FREELLMAPI !== '0',
         queue: queueStats(),
         model,
         storage: { db_exists: fs.existsSync(config.dbPath) },
@@ -86,9 +91,9 @@ export function createHamzaHubServer(): McpServer {
     'hub_freellmapi_chat',
     'Send a one-shot chat completion through FreeLLMAPI (model=auto by default). Lab only — free tiers.',
     {
-      prompt: z.string(),
-      system: z.string().optional(),
-      model: z.string().optional(),
+      prompt: z.string().max(100_000),
+      system: z.string().max(100_000).optional(),
+      model: z.string().max(100_000).optional(),
     },
     RO_OPEN,
     async ({ prompt, system, model }) => {
@@ -114,7 +119,7 @@ export function createHamzaHubServer(): McpServer {
       } catch (err) {
         return {
           isError: true,
-          content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
+          content: [{ type: 'text' as const, text: redactSecrets(err instanceof Error ? err.message : String(err)) }],
         };
       }
     }
@@ -127,7 +132,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'hub_list_agents',
     'List all agents across packs (optional pack filter)',
-    { pack: z.string().optional() },
+    { pack: z.string().max(100_000).optional() },
     RO,
     async ({ pack }) => {
       const agents = listAgents(pack).map((a) => ({
@@ -145,7 +150,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'hub_boss_route',
     'Preview how hub-boss would differentiate and assign a mission using FULL roster awareness',
-    { task: z.string() },
+    { task: z.string().max(100_000) },
     RO,
     async ({ task }) => jsonText(planWithBoss(task))
   );
@@ -162,10 +167,10 @@ export function createHamzaHubServer(): McpServer {
     'hub_agent_browse',
     'Browse everything in the one plugin: packs, all agents, tools13, MCP tools. Search with query or open one agent_id.',
     {
-      query: z.string().optional(),
-      pack: z.string().optional(),
-      category: z.string().optional(),
-      agent_id: z.string().optional(),
+      query: z.string().max(100_000).optional(),
+      pack: z.string().max(100_000).optional(),
+      category: z.string().max(100_000).optional(),
+      agent_id: z.string().max(100_000).optional(),
       limit: z.number().int().positive().optional(),
       include_tools13: z.boolean().optional(),
       include_mcp: z.boolean().optional(),
@@ -198,7 +203,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'hub_tools13_lookup',
     'List or look up the 13 Hub Boss recovery tools',
-    { query: z.string().optional() },
+    { query: z.string().max(100_000).optional() },
     RO,
     async ({ query }) => {
       if (!query || query === '*' || query === 'all') return jsonText(loadTools13Manifest());
@@ -212,7 +217,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'seo_audit_html',
     'Free Marketing SEO Audit on local HTML (tools13) — no Okara, no posting',
-    { html: z.string(), url: z.string().optional() },
+    { html: z.string().max(100_000), url: z.string().max(100_000).optional() },
     RO,
     async ({ html, url }) => jsonText(seoAuditHtml(html, url || 'https://example.com/'))
   );
@@ -221,10 +226,10 @@ export function createHamzaHubServer(): McpServer {
     'run_agent',
     'Queue an agent from any pack. Use hub-boss to differentiate work across Desk + ECC68 + Forge + Tools13.',
     {
-      agent_id: z.string(),
-      task: z.string(),
-      workspace_id: z.string(),
-      idempotency_key: z.string(),
+      agent_id: z.string().max(100_000),
+      task: z.string().max(100_000),
+      workspace_id: z.string().max(100_000),
+      idempotency_key: z.string().max(100_000),
     },
     WRITE_LOCAL,
     async (args) => {
@@ -244,7 +249,7 @@ export function createHamzaHubServer(): McpServer {
       } catch (err) {
         return {
           isError: true,
-          content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
+          content: [{ type: 'text' as const, text: redactSecrets(err instanceof Error ? err.message : String(err)) }],
         };
       }
     }
@@ -253,7 +258,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'task_status',
     'Get task status/progress',
-    { task_id: z.string() },
+    { task_id: z.string().max(100_000) },
     RO,
     async ({ task_id }) => {
       const task = getTask(task_id);
@@ -271,7 +276,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'task_result',
     'Get task output/evidence/artifacts',
-    { task_id: z.string() },
+    { task_id: z.string().max(100_000) },
     RO,
     async ({ task_id }) => {
       const task = getTask(task_id);
@@ -292,7 +297,7 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'cancel_task',
     'Cancel a queued/running task',
-    { task_id: z.string() },
+    { task_id: z.string().max(100_000) },
     CANCEL,
     async ({ task_id }) => {
       try {
@@ -300,7 +305,7 @@ export function createHamzaHubServer(): McpServer {
       } catch (err) {
         return {
           isError: true,
-          content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
+          content: [{ type: 'text' as const, text: redactSecrets(err instanceof Error ? err.message : String(err)) }],
         };
       }
     }
@@ -309,21 +314,21 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'clean_leads',
     'Clean and dedupe emails from messy text or CSV (Automation Desk)',
-    { text: z.string().optional(), csv: z.string().optional() },
+    { text: z.string().max(100_000).optional(), csv: z.string().max(100_000).optional() },
     RO,
     async (args) => jsonText(cleanLeads(args))
   );
   server.tool(
     'sheets_to_json',
     'Convert CSV/TSV spreadsheet text to JSON rows (Automation Desk)',
-    { csv: z.string(), dialect: z.string().optional() },
+    { csv: z.string().max(100_000), dialect: z.string().max(100_000).optional() },
     RO,
     async (args) => jsonText(sheetsToJson(args))
   );
   server.tool(
     'extract_contacts',
     'Extract emails, phones and social links from public HTML (Automation Desk)',
-    { html: z.string().optional(), url: z.string().optional() },
+    { html: z.string().max(100_000).optional(), url: z.string().max(100_000).optional() },
     RO,
     async (args) => jsonText(extractContacts(args))
   );
@@ -331,14 +336,14 @@ export function createHamzaHubServer(): McpServer {
   server.tool(
     'forge_detect',
     'Detect code-hosting forge for a URL',
-    { url: z.string() },
+    { url: z.string().max(100_000) },
     RO,
     async ({ url }) => jsonText(forgeDetect(url))
   );
   server.tool(
     'github_url_tricks',
     'Expand a GitHub repo URL into intelligence viewer/API links',
-    { url: z.string() },
+    { url: z.string().max(100_000) },
     RO,
     async ({ url }) => jsonText(githubUrlTricks(url))
   );
@@ -350,6 +355,14 @@ export function createHamzaHubServer(): McpServer {
     async () => jsonText(agentMiningQueries())
   );
 
+  server.tool('hub_edge_health', 'Read public edge health; never uses a secret path', {}, RO_OPEN, async () => jsonText(await edgeHealth()));
+  server.tool('hub_tools13_capabilities', 'Honest local runner availability and blocked install hints / حالة الأدوات', {}, RO, async () => jsonText(tools13Capabilities()));
+  server.tool('n8n_workflow_validate', 'Validate supplied workflow JSON without execution / تحقق دون تشغيل', {workflow:z.record(z.string().max(100_000),z.unknown())}, RO, async ({workflow}) => jsonText(validateWorkflow(workflow)));
+  server.tool('context_compact', 'Local line dedupe retaining errors; not upstream Headroom / ضغط محلي', {text:z.string().max(100_000).max(100_000),max_lines:z.number().int().min(1).max(1000).optional()}, RO, async ({text,max_lines}) => jsonText(compactContext(text,max_lines)));
+  server.tool('html_extract_links', 'Extract links from supplied HTML; no crawling / استخراج الروابط محلياً', {html:z.string().max(100_000).max(100_000)}, RO, async ({html}) => jsonText(extractLinks(html)));
+  server.resource('roster', 'hub://roster', {mimeType:'application/json',description:'All packs and agents'}, async uri => ({contents:[{uri:uri.href,mimeType:'application/json',text:redactSecrets(listAgents())}]}));
+  server.resource('capabilities', 'hub://capabilities', {mimeType:'application/json',description:'Tools13 availability'}, async uri => ({contents:[{uri:uri.href,mimeType:'application/json',text:redactSecrets(tools13Capabilities())}]}));
+  server.prompt('route_mission', 'Route an English or Arabic mission / توجيه المهمة', {task:z.string().max(100_000)}, ({task}) => ({messages:[{role:'user',content:{type:'text',text:redactSecrets(planWithBoss(task))}}]}));
   return server;
 }
 

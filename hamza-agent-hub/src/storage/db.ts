@@ -4,9 +4,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { config } from '../config.js';
 import { redactSecrets } from '../security/redact.js';
 
-export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'dead_letter';
 
 export interface TaskRow {
+  attempts?: number;
+  available_at?: number;
   id: string;
   agent_id: string;
   workspace_id: string;
@@ -53,6 +55,10 @@ export function getDb(): DatabaseSync {
       task_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL
     );
   `);
+  const columns = new Set((db.prepare('PRAGMA table_info(tasks)').all() as Array<{name: string}>).map(c => c.name));
+  if (!columns.has('attempts')) db.exec('ALTER TABLE tasks ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
+  if (!columns.has('available_at')) db.exec('ALTER TABLE tasks ADD COLUMN available_at INTEGER NOT NULL DEFAULT 0');
+  db.exec('CREATE INDEX IF NOT EXISTS queue_ready ON tasks(status, available_at, created_at)');
   return db;
 }
 
@@ -92,14 +98,15 @@ export function getTask(id: string): TaskRow | null {
 export function updateTask(id: string, patch: Partial<TaskRow>): TaskRow {
   const current = getTask(id);
   if (!current) throw new Error(`task not found: ${id}`);
+  if (['completed', 'failed', 'cancelled', 'dead_letter'].includes(current.status)) return current;
   const next = { ...current, ...patch, updated_at: Date.now() };
   getDb()
     .prepare(
-      `UPDATE tasks SET status=?, progress=?, progress_message=?, output=?, error=?, evidence=?, tool_log=?, artifacts=?, updated_at=?, started_at=?, finished_at=? WHERE id=?`
+      `UPDATE tasks SET status=?, progress=?, progress_message=?, output=?, error=?, evidence=?, tool_log=?, artifacts=?, updated_at=?, started_at=?, finished_at=?, attempts=?, available_at=? WHERE id=?`
     )
     .run(
       next.status, next.progress, next.progress_message, next.output, next.error, next.evidence,
-      next.tool_log, next.artifacts, next.updated_at, next.started_at, next.finished_at, id
+      next.tool_log, next.artifacts, next.updated_at, next.started_at, next.finished_at, next.attempts ?? 0, next.available_at ?? 0, id
     );
   return getTask(id)!;
 }
@@ -118,12 +125,12 @@ export function listEvents(taskId: string) {
 
 export function claimNextQueued(): TaskRow | null {
   const row = getDb()
-    .prepare(`SELECT * FROM tasks WHERE status='queued' ORDER BY created_at ASC LIMIT 1`)
-    .get() as TaskRow | undefined;
+    .prepare(`SELECT * FROM tasks WHERE status='queued' AND available_at<=? ORDER BY created_at ASC LIMIT 1`)
+    .get(Date.now()) as TaskRow | undefined;
   if (!row) return null;
   const now = Date.now();
   const result = getDb()
-    .prepare(`UPDATE tasks SET status='running', started_at=?, updated_at=?, progress_message='claimed' WHERE id=? AND status='queued'`)
+    .prepare(`UPDATE tasks SET status='running', attempts=attempts+1, started_at=?, updated_at=?, progress_message='claimed' WHERE id=? AND status='queued'`)
     .run(now, now, row.id);
   if (result.changes === 0) return null;
   return getTask(row.id);
@@ -132,7 +139,11 @@ export function claimNextQueued(): TaskRow | null {
 export function requeueInterrupted(): number {
   return Number(
     getDb()
-      .prepare(`UPDATE tasks SET status='queued', progress_message='requeued after restart', updated_at=? WHERE status='running'`)
-      .run(Date.now()).changes ?? 0
+      .prepare(`UPDATE tasks SET status=CASE WHEN attempts>=? THEN 'dead_letter' ELSE 'queued' END, progress_message='recovered after restart', updated_at=? WHERE status='running'`)
+      .run(config.maxAttempts, Date.now()).changes ?? 0
   );
+}
+
+export function taskQueueSummary() {
+  return getDb().prepare('SELECT status, count(*) AS count FROM tasks GROUP BY status').all();
 }

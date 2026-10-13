@@ -28,8 +28,10 @@ This repo ships a ChatGPT/Codex-ready package under:
 ```bash
 cd hamza-agent-hub
 ./scripts/pack-chatgpt-plugin.sh
-# → dist/hamza-agent-hub-chatgpt-plugin.zip
+# → chatgpt-plugin/release/hamza-agent-hub-chatgpt-plugin.zip
 ```
+
+Full Codex brief: [`../CODEX-HANDOFF.md`](../CODEX-HANDOFF.md)
 
 ## Test in ChatGPT (Developer / Work mode)
 

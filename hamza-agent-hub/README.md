@@ -117,11 +117,11 @@ Package for the ChatGPT + Codex Plugin Directory:
 
 ```bash
 ./scripts/pack-chatgpt-plugin.sh
-# → dist/hamza-agent-hub-chatgpt-plugin.zip
+# → chatgpt-plugin/release/hamza-agent-hub-chatgpt-plugin.zip
 ```
 
 - Package source: `chatgpt-plugin/hamza-agent-hub/`
-- Paste into Codex in ChatGPT: [`CODEX-HANDOFF.md`](CODEX-HANDOFF.md)
+- **Give to Codex in ChatGPT:** paste [`CODEX-HANDOFF.md`](CODEX-HANDOFF.md) (or [`GIVE-TO-CODEX.txt`](GIVE-TO-CODEX.txt))
 - Store checklist: [`docs/CHATGPT-STORE.md`](docs/CHATGPT-STORE.md)
 
 ## Verification

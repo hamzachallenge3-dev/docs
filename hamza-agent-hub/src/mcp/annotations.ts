@@ -28,3 +28,11 @@ export const CANCEL: ToolAnnotations = {
   openWorldHint: false,
   idempotentHint: true,
 };
+
+/** Shell in the sandbox user workdir — secret-path HTTP only. */
+export const SANDBOX_EXEC: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  openWorldHint: true,
+  idempotentHint: false,
+};

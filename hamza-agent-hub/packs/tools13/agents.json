@@ -6,6 +6,7 @@
     "description": "Lapian Notes Companion \u2014 Included full original ChatGPT plugin archive; samples film frames, not full film AI analysis. Source: https://github.com/bkingfilm/lapian-notes. Tested: PASS_LOCAL_CODE.",
     "tools": [
       "film_pack_prepare",
+      "run_command",
       "workspace_list",
       "workspace_read",
       "workspace_write"
@@ -23,6 +24,7 @@
     "description": "Free Marketing SEO Audit \u2014 Included full user-owned original plugin archive; NOT an Okara client. Works on HTML. Source: https://okara.ai/agent. Tested: PASS_LOCAL_CODE.",
     "tools": [
       "seo_audit_html",
+      "run_command",
       "workspace_list",
       "workspace_read",
       "workspace_write"

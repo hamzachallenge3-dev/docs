@@ -13,6 +13,7 @@ import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js'
 import { seoAuditHtml } from '../packs/tools13/seo.js';
 import { spawn } from 'node:child_process';
 import { ROOT } from '../config.js';
+import { runSandboxCommand, sandboxToolsEnabled } from './sandbox.js';
 
 export interface ToolCall {
   name: string;
@@ -29,6 +30,18 @@ export async function runTool(
   try {
     assertToolAllowed(allowed, call.name);
     switch (call.name) {
+      case 'run_command': {
+        if (!sandboxToolsEnabled()) {
+          return { ok: false, name: call.name, output: 'run_command requires authenticated HTTP (HUB_SECRET path)' };
+        }
+        const result = await runSandboxCommand({
+          command: String(call.arguments.command ?? ''),
+          cwd: call.arguments.cwd ? String(call.arguments.cwd) : undefined,
+          timeout_ms: call.arguments.timeout_ms ? Number(call.arguments.timeout_ms) : undefined,
+          signal,
+        });
+        return { ok: result.ok, name: call.name, output: redactSecrets(result) };
+      }
       case 'hub_tools13_capabilities': return {ok:true,name:call.name,output:redactSecrets(tools13Capabilities())};
       case 'n8n_workflow_validate': return {ok:true,name:call.name,output:redactSecrets(validateWorkflow(call.arguments.workflow))};
       case 'context_compact': return {ok:true,name:call.name,output:redactSecrets(compactContext(String(call.arguments.text ?? ''),Number(call.arguments.max_lines ?? 200)))};

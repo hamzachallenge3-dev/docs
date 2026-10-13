@@ -10,6 +10,7 @@ const shapes: Record<string, Record<string, string>> = {
   film_pack_prepare:{video_path:'string',out_path:'string',interval:'number',max_frames:'number'},
   n8n_workflow_validate:{workflow:'object'}, context_compact:{text:'string',max_lines:'number'},
   html_extract_links:{html:'string'}, hub_tools13_capabilities:{},
+  run_command:{command:'string',cwd:'string',timeout_ms:'number'},
 };
 export function modelTool(name: string) {
   return {type:'function', function:{ name, description:name,

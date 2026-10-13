@@ -1,8 +1,9 @@
 import { listAgents, PACKS, getAgent, type AgentDef } from './registry.js';
 import { loadTools13Manifest } from '../packs/tools13/registry.js';
 import { scoreAllAgents } from './boss.js';
+import { sandboxToolsEnabled } from '../tools/sandbox.js';
 
-/** MCP tools exposed by this one plugin (stdio/HTTP surface). */
+/** MCP tools exposed by this one plugin (stdio / base HTTP surface). */
 export const MCP_SURFACE_TOOLS = [
   'hub_health',
   'hub_edge_health',
@@ -30,6 +31,9 @@ export const MCP_SURFACE_TOOLS = [
   'github_url_tricks',
   'agent_mining_queries',
 ] as const;
+
+/** Extra tools only on authenticated HTTP (Worker HUB_SECRET path → hub.py). */
+export const SANDBOX_MCP_TOOLS = ['run_command'] as const;
 
 export interface BrowseOptions {
   query?: string;
@@ -152,7 +156,10 @@ export function browseEverything(opts: BrowseOptions = {}): {
 
   // MCP surface
   if (includeMcp) {
-    for (const name of MCP_SURFACE_TOOLS) {
+    const surface = sandboxToolsEnabled()
+      ? [...MCP_SURFACE_TOOLS, ...SANDBOX_MCP_TOOLS]
+      : [...MCP_SURFACE_TOOLS];
+    for (const name of surface) {
       const text = haystack([name, 'mcp', 'tool']);
       const score = query ? scoreText(query, text) : 1;
       if (!query || score > 0) {

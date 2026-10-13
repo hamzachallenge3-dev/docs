@@ -32,7 +32,7 @@ The container runs as an unprivileged user. Model endpoints are operator-configu
 Source: `cloudflare-worker/worker.js`; configuration: `cloudflare-worker/wrangler.jsonc`.
 
 1. Use an account-approved Wrangler installation. Keep the default `hamza-agent-hub-edge-lab` name for staging.
-2. Set secret bindings interactively from your secret manager using `wrangler secret put`: `HUB_SECRET` (32+ URL-safe random characters), `ORIGIN_URL` (HTTPS origin host only, no path/query/userinfo), `ORIGIN_TOKEN` (matches the origin's `HAH_AUTH_TOKEN`, 24+ characters), and `OPENAI_APPS_CHALLENGE` (portal value).
+2. Set secret bindings interactively from your secret manager using `wrangler secret put`: `HUB_SECRET` (32+ URL-safe random characters), `ORIGIN_URL` (HTTPS origin host only, no path/query/userinfo; live Worker alias `HUB_ORIGIN` is also accepted), `ORIGIN_TOKEN` (matches the origin's `HAH_AUTH_TOKEN`, 24+ characters), and `OPENAI_APPS_CHALLENGE` (portal value).
 3. Set exact allowed origins in `ALLOWED_ORIGINS`; default is `https://chatgpt.com`. Requests without Origin remain supported. Verify the actual ChatGPT client origin before changing this.
 4. Verify the rate-limit binding for your Cloudflare account. Requests fail closed if it is absent. Default 120 requests/client/minute; health/challenge are public. Add WAF limits for public health probes.
 5. Deploy to a staging host first. No production route is included in the checked-in Wrangler config. After staging approval, bind `hub.imdifferent01.com` explicitly using your existing deployment process.
@@ -47,8 +47,8 @@ Kaggle is an optional temporary lab host, not an always-on store service.
 1. In a CPU session, clone the authorized branch and enter `hamza-agent-hub`.
 2. Install Node 22+ and Python 3.11+ with the host's package manager. Run `npm ci && npm run build`; create a venv and install `runtime/requirements.txt`.
 3. Load `HAH_AUTH_TOKEN` using Kaggle's private secrets integration. Never print environment variables or notebook cell outputs containing tokens.
-4. Start from `runtime/`: `uvicorn hub:app --host 127.0.0.1 --port 8789 --no-access-log`. Confirm `http://127.0.0.1:8789/healthz` before opening a tunnel.
-5. Start the existing authenticated named cloudflared tunnel pointing at port 8789. Use private tunnel configuration outside this repository. Quick tunnels are ephemeral: keep their URL private, update `ORIGIN_URL` via Worker secret binding after each restart, and never commit the URL.
+4. Start from `runtime/`: `uvicorn hub:app --host 127.0.0.1 --port 8787 --no-access-log` (use `8789` only if your tunnel/Docker map uses that port). Confirm `http://127.0.0.1:8787/healthz` before opening a tunnel. Run as the sandbox user (`agentbox`) when the host provides one.
+5. Start the existing authenticated named cloudflared tunnel pointing at the same port (live: 8787). Use private tunnel configuration outside this repository. Quick tunnels are ephemeral: keep their URL private, update `ORIGIN_URL` or live alias `HUB_ORIGIN` via Worker secret binding after each restart, and never commit the URL.
 6. Check staging edge health and initialize MCP using a secret-aware client. Keep access logging disabled at the tunnel and edge.
 7. On failure, check the kernel is awake, origin health, tunnel process, Worker origin binding, then auth. Restart in that order. Rotate secrets privately if a URL/token was exposed.
 

@@ -1,8 +1,9 @@
 """Python Streamable HTTP entrypoint sharing the ONE Node agent runtime.
 
-Run uvicorn hub:app --host 127.0.0.1 --port 8789 from runtime/.
-The lifespan starts the built Node runtime on loopback. No independent roster.
-Access logs MUST be disabled (uvicorn --no-access-log).
+Run uvicorn hub:app --host 127.0.0.1 --port 8787 from runtime/
+(or 8789 to match Docker). The lifespan starts the built Node runtime on
+loopback. No independent roster. Access logs MUST be disabled
+(uvicorn --no-access-log).
 """
 import asyncio
 import hmac

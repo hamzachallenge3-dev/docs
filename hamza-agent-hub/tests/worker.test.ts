@@ -31,3 +31,18 @@ it('Worker health/challenge and failures never return secret values',async()=>{
  const limited=await handle(req(`/${env.HUB_SECRET}/mcp`),{...env,RATE_LIMITER:{limit:async()=>({success:false})}});
  expect(limited.status).toBe(429);expect(limited.headers.get('Retry-After')).toBe('60');
 });
+it('Worker accepts live HUB_ORIGIN alias when ORIGIN_URL is unset',async()=>{
+ const live={...env,ORIGIN_URL:undefined,HUB_ORIGIN:'https://tunnel.example/'};
+ const proxy=vi.fn(async(url:URL)=> {
+  expect(url.href).toBe('https://tunnel.example/mcp');
+  return Response.json({ok:true});
+ });
+ const res=await handle(req(`/${env.HUB_SECRET}/mcp`,'POST','{}'),live,proxy);
+ expect(res.status).toBe(200);
+ expect(proxy).toHaveBeenCalledOnce();
+ const health=await handle(req('/healthz','GET'),live,async(url:URL)=>{
+  expect(url.href).toBe('https://tunnel.example/healthz');
+  return Response.json({ok:true});
+ });
+ expect(health.status).toBe(200);
+});

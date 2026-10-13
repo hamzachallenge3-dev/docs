@@ -1,4 +1,4 @@
-/** Secret bindings: HUB_SECRET, ORIGIN_URL, ORIGIN_TOKEN, OPENAI_APPS_CHALLENGE.
+/** Secret bindings: HUB_SECRET, ORIGIN_URL (or live alias HUB_ORIGIN), ORIGIN_TOKEN, OPENAI_APPS_CHALLENGE.
  * Never log URLs: the public MCP path is a bearer capability.
  */
 export async function handle(request, env, fetcher = fetch) {
@@ -11,7 +11,7 @@ export async function handle(request, env, fetcher = fetch) {
   if (url.pathname === '/healthz') {
     if (request.method !== 'GET') return json(405, {error:'method not allowed'});
     try {
-      const origin = originUrl(env.ORIGIN_URL);
+      const origin = originUrl(resolveOrigin(env));
       const res = await fetcher(new URL('/healthz', origin), {redirect:'error', signal:AbortSignal.timeout(3000)});
       const data = res.ok ? await res.json() : {};
       return json(res.ok && data.ok === true ? 200 : 503, {ok:res.ok && data.ok === true, service:'hamza-agent-hub-edge'});
@@ -49,7 +49,7 @@ export async function handle(request, env, fetcher = fetch) {
   const body = new Uint8Array(size); let offset = 0;
   for(const chunk of chunks) {body.set(chunk,offset); offset += chunk.length;}
   try {
-    const origin = originUrl(env.ORIGIN_URL);
+    const origin = originUrl(resolveOrigin(env));
     const headers = new Headers({'Content-Type':'application/json','Authorization':`Bearer ${env.ORIGIN_TOKEN}`});
     for(const h of ['Accept','MCP-Protocol-Version','Last-Event-ID']) {
       const value=request.headers.get(h); if(value) headers.set(h,value);
@@ -64,6 +64,10 @@ export async function handle(request, env, fetcher = fetch) {
     }
     return new Response(res.body, {status:res.status,headers:responseHeaders});
   } catch { return json(502, {error:'origin unavailable'}); }
+}
+/** Prefer ORIGIN_URL; accept live Worker alias HUB_ORIGIN for the tunnel HTTPS origin. */
+function resolveOrigin(env) {
+  return env.ORIGIN_URL || env.HUB_ORIGIN || '';
 }
 function originUrl(raw) {
   const url = new URL(raw);

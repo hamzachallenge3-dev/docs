@@ -1,0 +1,27 @@
+Copy everything below this line into Codex in ChatGPT (Work / Codex mode).
+Attach or point Codex at the GitHub repo PR if available.
+────────────────────────────────────────────────────────────────
+
+You are Codex in ChatGPT. Strengthen and finish store packaging for Hamza Agent Hub.
+
+Repo: https://github.com/hamzachallenge3-dev/docs
+Branch/PR: https://github.com/hamzachallenge3-dev/docs/pull/3
+Plugin folder: hamza-agent-hub/
+
+Already built (one plugin only):
+- 92 agents (hub-boss, hub-agent-browse, hub-freellmapi, Desk, ECC68, Forge, Tools13)
+- MCP tool annotations for ChatGPT directory
+- FreeLLMAPI (HAH_MODEL_PROVIDER=freellmapi / alias lotf)
+- ChatGPT package: hamza-agent-hub/chatgpt-plugin/hamza-agent-hub/
+- Pack: cd hamza-agent-hub && npm run pack:chatgpt
+- Full brief: hamza-agent-hub/CODEX-HANDOFF.md
+- Store checklist: hamza-agent-hub/docs/CHATGPT-STORE.md
+
+Do this now:
+1) cd hamza-agent-hub && npm install && npm run build && npm test
+2) npm run pack:chatgpt and validate the ZIP
+3) Strengthen skills + HTTPS MCP for ChatGPT Plugin Directory
+4) Prepare upload steps for https://platform.openai.com/plugins
+5) Return ZIP path, store steps, and a short diff summary
+
+Rules: one plugin only; no secrets in ZIP; no paid spend; no production GLM/Headroom mutation.

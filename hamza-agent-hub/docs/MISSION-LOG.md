@@ -44,7 +44,7 @@ All uploaded kits live in **this one plugin** (`hamza-agent-hub/`):
 | Clean leads | `desk-*` |
 | Lapian film pack | `tool13-lapian-notes` |
 
-Roster size in routing plan: **91**  
+Roster size in routing plan: **92**  
 Packs: hub, desk, ecc68, forge, tools13
 
 ## Install (only this plugin)

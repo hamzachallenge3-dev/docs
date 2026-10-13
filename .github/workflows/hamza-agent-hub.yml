@@ -1,0 +1,32 @@
+name: Hamza Agent Hub checks
+on:
+  pull_request:
+    paths: ['hamza-agent-hub/**', '.github/workflows/hamza-agent-hub.yml']
+  push:
+    branches: [main, cursor/hamza-agent-hub-plugin-838a]
+    paths: ['hamza-agent-hub/**', '.github/workflows/hamza-agent-hub.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: hamza-agent-hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: hamza-agent-hub/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci
+      - run: python3 -m pip install -r runtime/requirements.txt
+      - run: npm run check
+      - run: npm audit --omit=dev
+      - run: python3 -m pip install pip-audit && pip-audit -r runtime/requirements.txt
+      - run: git diff --exit-code -- chatgpt-plugin/release/hamza-agent-hub-chatgpt-plugin.zip

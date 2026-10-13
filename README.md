@@ -1,5 +1,28 @@
 # Mintlify Starter Kit
 
+## الإضافة الواحدة — Hamza Agent Hub
+
+كل الشغل في **إضافة MCP واحدة**: [`hamza-agent-hub/`](./hamza-agent-hub/)
+
+| المصدر | داخل الإضافة |
+|---|---|
+| ECC68 Build Kit (68 وكيلاً) | `packs/ecc68/` |
+| Automation Desk / Hamza Hub | `packs/desk/` |
+| Cross-Forge / Plugin Builder | `packs/forge/` |
+| Hub Boss Tools Recovery 13 | `packs/tools13/` |
+| الموزّع الذي يعرف الجميع | `hub-boss` |
+
+- الوكلاء: **92** (hub-boss + hub-agent-browse + hub-freellmapi + desk + ecc + forge + tools13)
+- تصفّح الكل: `hub_agent_browse` / `hub-agent-browse`
+- النموذج المجاني: **FreeLLMAPI** (OSS) عبر `hub-freellmapi` — انظر `hamza-agent-hub/docs/FREELLMAPI.md`
+- حزمة ChatGPT/Codex Store: `hamza-agent-hub/chatgpt-plugin/` + `CODEX-HANDOFF.md` لـ Codex
+- إعداد Cursor: [`cursor-mcp.hamza-agent-hub.example.json`](./cursor-mcp.hamza-agent-hub.example.json)
+- الدليل: [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md)
+
+`ecc68-lab/` مجرد مؤشر قديم — لا تثبّته كإضافة منفصلة.
+
+---
+
 Use the starter kit to get your docs deployed and ready to customize.
 
 Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
@@ -52,4 +75,4 @@ Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/sett
 - If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
 
 ### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+- [Mintlify documentation](https://mintlify.com)

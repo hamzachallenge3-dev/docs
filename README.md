@@ -1,14 +1,22 @@
 # Mintlify Starter Kit
 
-## Hamza Agent Hub (unified plugin)
+## الإضافة الواحدة — Hamza Agent Hub
 
-New unified MCP plugin: [`hamza-agent-hub/`](./hamza-agent-hub/) — Automation Desk + ECC68 + Cross-Forge Intelligence.  
-Boss router: `hub-boss`. See [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md).
+كل الشغل في **إضافة MCP واحدة**: [`hamza-agent-hub/`](./hamza-agent-hub/)
 
-## ECC68 MCP plugin (lab)
+| المصدر | داخل الإضافة |
+|---|---|
+| ECC68 Build Kit (68 وكيلاً) | `packs/ecc68/` |
+| Automation Desk / Hamza Hub | `packs/desk/` |
+| Cross-Forge / Plugin Builder | `packs/forge/` |
+| Hub Boss Tools Recovery 13 | `packs/tools13/` |
+| الموزّع الذي يعرف الجميع | `hub-boss` |
 
-ECC-only lab plugin: [`ecc68-lab/`](./ecc68-lab/).  
-Orchestrator: `ecc-chief-of-staff`. See [`ecc68-lab/README.md`](./ecc68-lab/README.md).
+- الوكلاء: **90** (1 hub + 4 desk + 68 ecc + 4 forge + 13 tools13)
+- إعداد Cursor: [`cursor-mcp.hamza-agent-hub.example.json`](./cursor-mcp.hamza-agent-hub.example.json)
+- الدليل: [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md)
+
+`ecc68-lab/` مجرد مؤشر قديم — لا تثبّته كإضافة منفصلة.
 
 ---
 
@@ -64,4 +72,4 @@ Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/sett
 - If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
 
 ### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+- [Mintlify documentation](https://mintlify.com)

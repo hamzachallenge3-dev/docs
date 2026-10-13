@@ -1,44 +1,45 @@
-# Unified Hub mission
+# Unified Hub — one plugin mission log
 
-## Mission
-Clean leads + security review login.py
+## Consolidation
 
-## Result: WORKING
+All uploaded kits live in **this one plugin** (`hamza-agent-hub/`):
 
-| Step | Agent | Pack | Status |
-|---|---|---|---|
-| Route | hub-boss | hub | completed |
-| Primary | ecc-security-reviewer | ecc68 | completed |
-| Desk support | desk-lead-cleaner | desk | completed |
+| Source | Location |
+|---|---|
+| ECC68 Build Kit | `packs/ecc68/` (+ `kit-original/`, legacy docs under `docs/legacy-ecc68*`) |
+| Automation Desk / Hamza Hub | `packs/desk/` |
+| Cross-Forge / Plugin Builder | `packs/forge/` |
+| Hub Boss Tools Recovery 13 | `packs/tools13/` |
+| Full-roster distributor | `hub-boss` in `packs/hub/` |
 
-Desk tool output: `{"emails":["a@x.com","b@x.com"],"count":2,"duplicates_removed":1}`
+`ecc68-lab/` at repo root is a redirect stub only.
 
-```json
-{
-  "orchestrator": "hub-boss",
-  "pack": "ecc68",
-  "primary": "ecc-security-reviewer",
-  "secondary": [
-    "desk-inbox-to-lead",
-    "desk-lead-cleaner"
-  ],
-  "rationale": "Hub boss matched → ecc-security-reviewer@ecc68(20), desk-inbox-to-lead@desk(12), desk-lead-cleaner@desk(11), ecc-python-reviewer@ecc68(8)",
-  "decomposition": [
-    {
-      "agent_id": "ecc-security-reviewer",
-      "pack": "ecc68",
-      "subtask": "Primary (reviewer): Clean leads a@x.com B@x.com a@x.com then security review login.py for SQL injection"
-    },
-    {
-      "agent_id": "desk-inbox-to-lead",
-      "pack": "desk",
-      "subtask": "Support from desk: Clean leads a@x.com B@x.com a@x.com then security review login.py for SQL injection"
-    },
-    {
-      "agent_id": "desk-lead-cleaner",
-      "pack": "desk",
-      "subtask": "Support from desk: Clean leads a@x.com B@x.com a@x.com then security review login.py for SQL injection"
-    }
-  ]
-}
+## Boss awareness
+
+`hub-boss`:
+
+- Scores **all 90 agents** (full roster)
+- Writes `artifacts/hub-full-roster.md`
+- Exposes `hub_full_roster` + `hub_tools13_lookup`
+
+## Latest verified routing
+
+| Task | Primary |
+|---|---|
+| SEO audit HTML | `tool13-seo-audit` |
+| Security review login.py | `ecc-security-reviewer` |
+| Clean leads | `desk-*` |
+| Lapian film pack | `tool13-lapian-notes` |
+
+Roster size in routing plan: **90**  
+Packs: hub, desk, ecc68, forge, tools13
+
+## Install (only this plugin)
+
+```bash
+cd hamza-agent-hub
+npm install && npm run build && npm test
+./scripts/start.sh
 ```
+
+Cursor: use root `cursor-mcp.hamza-agent-hub.example.json` or `cursor-mcp.example.json` here.

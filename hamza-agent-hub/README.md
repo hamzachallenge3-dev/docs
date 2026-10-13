@@ -1,34 +1,30 @@
-# Hamza Agent Hub — إضافة موحّدة جديدة
+# Hamza Agent Hub — الإضافة الواحدة
 
-إضافة MCP واحدة تجمع **كل شيء من Hamza Agent Hub / Automation Desk** مع **ECC68** في حزمة واحدة قابلة للتشغيل.
+هذه **إضافة MCP واحدة** تجمع كل ما أعطيتَه في مكان واحد قابل للتشغيل:
 
-> هذه إضافة مختبر جديدة. لا تعدّل الإنتاج ولا إعدادات GLM/Headroom الإنتاجية.
-
-## الحزم (Packs)
-
-| Pack | المحتوى |
+| المصدر | أين صار داخل الإضافة |
 |---|---|
-| `hub` | `hub-boss` — يعرف **كل** الوكلاء ويفرّق الشغل عليهم |
-| `desk` | أدوات Automation Desk + وكلاء Inbox / Weekly Report / Meeting-to-Action |
-| `ecc68` | 68 وكيل ECC مع نفس الملفات الأصلية المثبّتة |
-| `forge` | Cross-forge intelligence + GitHub tricks + agent mining |
-| `tools13` | حزمة استرجاع Hub Boss Tools (13): SEO، Lapian، nanoMuse، n8n، Goose، Headroom، … |
+| ECC68 Build Kit (68 وكيل) | `packs/ecc68/` |
+| Automation Desk / Hamza Hub | `packs/desk/` + أدوات Desk |
+| Cross-Forge / Plugin Builder | `packs/forge/` |
+| Hub Boss Tools Recovery 13 | `packs/tools13/` |
+| الموزّع الذي يعرف الجميع | `hub-boss` في `packs/hub/` |
 
-**المجموع: 90 وكيلاً** (1 hub + 4 desk + 68 ecc + 4 forge + 13 tools13)
+لا تثبّت `ecc68-lab` كإضافة منفصلة — دُمجت هنا.
 
-`hub-boss` يحمّل الدليل الكامل (`hub_full_roster`) ويسجّل كل الـ IDs قبل التوزيع — لا يخترع أسماء.
+## الوكلاء: 90
 
-## أدوات MCP
+- **1** `hub-boss` — يعرف الدليل الكامل ويفرّق المهام على الجميع
+- **4** Desk
+- **68** ECC
+- **4** Forge
+- **13** Tools13
 
-**Hub:** `hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task`
+## أدوات MCP الرئيسية
 
-**Desk (مطابقة desk.imdifferent01.com):** `clean_leads` · `sheets_to_json` · `extract_contacts`
+`hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task` · `clean_leads` · `sheets_to_json` · `extract_contacts` · `seo_audit_html` · `forge_detect` · `github_url_tricks` · `agent_mining_queries`
 
-**Forge:** `forge_detect` · `github_url_tricks` · `agent_mining_queries`
-
-**Tools13:** `seo_audit_html` · (Lapian `film_pack_prepare` عبر الوكيل عند توفر ffmpeg)
-
-## التشغيل
+## تثبيت واحد
 
 ```bash
 cd hamza-agent-hub
@@ -38,23 +34,46 @@ npm test
 ./scripts/start.sh
 ```
 
-صلها بـ Cursor عبر `cursor-mcp.example.json` (stdio).
+### Cursor (stdio) — إعداد واحد فقط
 
-## مهمة تجريبية
+انسخ `cursor-mcp.example.json` (أو الملف في جذر المستودع `cursor-mcp.hamza-agent-hub.example.json`) إلى إعدادات MCP، واستبدل المسار المطلق، ثم أعد تحميل MCP.
+
+```json
+{
+  "mcpServers": {
+    "hamza-agent-hub": {
+      "command": "node",
+      "args": ["--experimental-sqlite", "/ABS/hamza-agent-hub/dist/index.js"],
+      "env": { "HAH_TRANSPORT": "stdio", "HAH_CONCURRENCY": "2" }
+    }
+  }
+}
+```
+
+## تجربة التوزيع
 
 ```text
 run_agent(
   agent_id="hub-boss",
-  task="Clean these leads then security-review login.py: a@x.com b@x.com a@x.com",
-  workspace_id="demo",
-  idempotency_key="hub-1"
+  task="SEO audit + clean leads + security review login.py",
+  workspace_id="one",
+  idempotency_key="one-plugin-1"
 )
 ```
 
-الـ boss يوزّع على Desk و/أو ECC حسب المهمة.
+الـ boss يكتب:
+- `artifacts/hub-full-roster.md` — كل الوكلاء الذين يعرفهم
+- `artifacts/hub-routing-plan.json` — من اختار ولماذا
 
-## المصادر
+## حدود صريحة
 
-- Automation Desk الحي: https://desk.imdifferent01.com
-- ECC upstream: `packs/ecc68/upstream-ecc/`
-- Plugin-builder architecture: `attribution/PLUGIN_TARGET_ARCHITECTURE.md`
+- مختبر جديد — لا يعدّل إنتاج Hamza Agent Hub ولا GLM/Headroom الإنتاجي
+- بدون `HAH_MODEL_URL` النموذج الحي = BLOCKED (المسار heuristic يعمل للاختبار)
+- أوزان GLM/Kimi غير مضمّنة (روابط فقط في `packs/tools13/MODELS.md`)
+
+## التحقق
+
+```bash
+npm test
+python3 packs/tools13/scripts/verify_bundle.py
+```

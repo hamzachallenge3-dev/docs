@@ -20,7 +20,8 @@ import { seoAuditHtml } from '../packs/tools13/seo.js';
 import { redactSecrets } from '../security/redact.js';
 import { edgeHealth } from './edge-health.js';
 import { tools13Capabilities, validateWorkflow, compactContext, extractLinks } from '../packs/tools13/offline.js';
-import { CANCEL, RO, RO_OPEN, WRITE_LOCAL } from './annotations.js';
+import { CANCEL, RO, RO_OPEN, SANDBOX_EXEC, WRITE_LOCAL } from './annotations.js';
+import { runSandboxCommand, sandboxToolsEnabled } from '../tools/sandbox.js';
 import fs from 'node:fs';
 
 function jsonText(data: unknown) {
@@ -31,7 +32,7 @@ export function createHamzaHubServer(): McpServer {
   startQueue();
   const server = new McpServer({
     name: 'hamza-agent-hub',
-    version: '1.2.0',
+    version: '1.2.1',
     title: 'Hamza Agent Hub',
   });
 
@@ -54,7 +55,7 @@ export function createHamzaHubServer(): McpServer {
       return jsonText({
         ok,
         service: 'hamza-agent-hub',
-        version: '1.2.0',
+        version: '1.2.1',
         chatgpt_plugin: true,
         packs: PACKS,
         agents: listAgents().length,
@@ -360,6 +361,31 @@ export function createHamzaHubServer(): McpServer {
   server.tool('n8n_workflow_validate', 'Validate supplied workflow JSON without execution / تحقق دون تشغيل', {workflow:z.record(z.string().max(100_000),z.unknown())}, RO, async ({workflow}) => jsonText(validateWorkflow(workflow)));
   server.tool('context_compact', 'Local line dedupe retaining errors; not upstream Headroom / ضغط محلي', {text:z.string().max(100_000).max(100_000),max_lines:z.number().int().min(1).max(1000).optional()}, RO, async ({text,max_lines}) => jsonText(compactContext(text,max_lines)));
   server.tool('html_extract_links', 'Extract links from supplied HTML; no crawling / استخراج الروابط محلياً', {html:z.string().max(100_000).max(100_000)}, RO, async ({html}) => jsonText(extractLinks(html)));
+
+  // Secret-path HTTP only (Worker HUB_SECRET → hub.py). Not registered on stdio.
+  if (sandboxToolsEnabled()) {
+    server.tool(
+      'run_command',
+      'Run a shell command as HUB_SANDBOX_USER (default agentbox) under the sandbox work dir; HTTP secret-path only',
+      {
+        command: z.string().min(1).max(4_000),
+        cwd: z.string().max(1_000).optional(),
+        timeout_ms: z.number().int().min(1_000).max(120_000).optional(),
+      },
+      SANDBOX_EXEC,
+      async ({ command, cwd, timeout_ms }) => {
+        try {
+          return jsonText(await runSandboxCommand({ command, cwd, timeout_ms }));
+        } catch (err) {
+          return {
+            isError: true,
+            content: [{ type: 'text' as const, text: redactSecrets(err instanceof Error ? err.message : String(err)) }],
+          };
+        }
+      },
+    );
+  }
+
   server.resource('roster', 'hub://roster', {mimeType:'application/json',description:'All packs and agents'}, async uri => ({contents:[{uri:uri.href,mimeType:'application/json',text:redactSecrets(listAgents())}]}));
   server.resource('capabilities', 'hub://capabilities', {mimeType:'application/json',description:'Tools13 availability'}, async uri => ({contents:[{uri:uri.href,mimeType:'application/json',text:redactSecrets(tools13Capabilities())}]}));
   server.prompt('route_mission', 'Route an English or Arabic mission / توجيه المهمة', {task:z.string().max(100_000)}, ({task}) => ({messages:[{role:'user',content:{type:'text',text:redactSecrets(planWithBoss(task))}}]}));

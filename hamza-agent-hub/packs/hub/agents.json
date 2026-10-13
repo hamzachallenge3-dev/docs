@@ -9,6 +9,7 @@
       "hub_list_agents",
       "hub_full_roster",
       "hub_tools13_lookup",
+      "run_command",
       "dispatch_agent",
       "workspace_write",
       "workspace_list",

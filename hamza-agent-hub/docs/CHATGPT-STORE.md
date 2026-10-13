@@ -7,7 +7,7 @@ Release 1.2.0 is a private setup scaffold with tested source. It is **not yet ap
 | One installable plugin | Done | `hamza-agent-hub`; 92 agents in five packs; ecc68-lab remains a redirect |
 | Portable manifest + compatibility overlay | Done | Agent Plugins 1.0 root manifest; synchronized identity/version; subtitle ≤30 chars; three default prompts |
 | App binding | Blocked | `.app.example.json` is an unverified template, excluded from ZIP. Obtain a real technical app ID after private MCP connection; never invent one |
-| 25 annotated tools | Done locally | Real `tools/list` annotation audit; catalogs must match |
+| 25 annotated tools (+ `run_command` on secret-path HTTP) | Done locally | Stdio/base catalog is 25; authenticated HTTP adds sandbox `run_command` |
 | Resources and prompts | Done locally | `hub://roster`, `hub://capabilities`, `route_mission` |
 | Worker + Python origin | Done locally | Tested proxy and Python-to-Node integration; not deployed |
 | Always-on origin | Blocked | Needs an account-provisioned free host and private deployment secrets; Kaggle sleeps |

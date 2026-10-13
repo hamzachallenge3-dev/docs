@@ -44,12 +44,24 @@ The Worker replaces inbound Authorization with the origin token. Cookies, arbitr
 
 Kaggle is an optional temporary lab host, not an always-on store service.
 
-1. In a CPU session, clone the authorized branch and enter `hamza-agent-hub`.
-2. Install Node 22+ and Python 3.11+ with the host's package manager. Run `npm ci && npm run build`; create a venv and install `runtime/requirements.txt`.
-3. Load `HAH_AUTH_TOKEN` using Kaggle's private secrets integration. Never print environment variables or notebook cell outputs containing tokens.
-4. Start from `runtime/`: `uvicorn hub:app --host 127.0.0.1 --port 8787 --no-access-log` (use `8789` only if your tunnel/Docker map uses that port). Confirm `http://127.0.0.1:8787/healthz` before opening a tunnel. Run as the sandbox user (`agentbox`) when the host provides one.
-5. Start the existing authenticated named cloudflared tunnel pointing at the same port (live: 8787). Use private tunnel configuration outside this repository. Quick tunnels are ephemeral: keep their URL private, update `ORIGIN_URL` or live alias `HUB_ORIGIN` via Worker secret binding after each restart, and never commit the URL.
-6. Check staging edge health and initialize MCP using a secret-aware client. Keep access logging disabled at the tunnel and edge.
+**One-shot starter** (preferred): after cloning `main` and loading `HAH_AUTH_TOKEN` from Kaggle Secrets (never print it):
+
+```bash
+cd hamza-agent-hub
+# Optional overrides: HUB_SANDBOX_USER=agentbox HUB_SANDBOX_WORK_DIR=/home/agentbox/work HAH_ORIGIN_PORT=8787
+bash runtime/kaggle_start.sh
+```
+
+That script builds the Node runtime, installs Python deps, ensures `/home/agentbox/work`, enables `run_command` for the sandbox user, and starts `hub.py` on **8787**.
+
+Manual steps if you skip the script:
+
+1. In a CPU session, clone `main` and enter `hamza-agent-hub`.
+2. Install Node 22+ and Python 3.11+. Run `npm ci && npm run build`; create a venv and install `runtime/requirements.txt`.
+3. Load `HAH_AUTH_TOKEN` using Kaggle's private secrets integration. Never print environment variables or notebook cell outputs containing tokens. It must match Worker `ORIGIN_TOKEN`.
+4. Export `HUB_SANDBOX_USER=agentbox`, `HUB_SANDBOX_WORK_DIR=/home/agentbox/work`, `HAH_ENABLE_SANDBOX_TOOLS=1`. Start from `runtime/`: `uvicorn hub:app --host 127.0.0.1 --port 8787 --no-access-log`. Confirm `http://127.0.0.1:8787/healthz`.
+5. Start the existing authenticated named cloudflared tunnel pointing at **8787**. Keep tunnel config private; update Worker `ORIGIN_URL` or live alias `HUB_ORIGIN` after restarts. Never commit the URL.
+6. Connect clients at `https://hub.imdifferent01.com/<HUB_SECRET>/mcp`. `run_command` appears only on that authenticated HTTP path (not stdio). There is no legacy `start_job`/`job_status` in this plugin — use `run_agent` / `task_status` / `task_result` for queued agent work.
 7. On failure, check the kernel is awake, origin health, tunnel process, Worker origin binding, then auth. Restart in that order. Rotate secrets privately if a URL/token was exposed.
 
 Kernel sleep kills the tunnel and running process. There is no implemented Worker wake queue. Migrate to a persistent origin before public review; polling cannot make a sleeping Kaggle kernel reliable.

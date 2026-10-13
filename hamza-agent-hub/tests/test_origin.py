@@ -33,7 +33,10 @@ class OriginContract(unittest.TestCase):
                 self.assertEqual(init.json()["result"]["serverInfo"]["name"],"hamza-agent-hub")
                 tools = client.post("/mcp",headers=headers,json={"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})
                 self.assertEqual(tools.status_code,200)
-                self.assertEqual(len(tools.json()["result"]["tools"]),25)
+                # Base surface (25) + run_command on authenticated HTTP secret-path hubs.
+                self.assertEqual(len(tools.json()["result"]["tools"]),26)
+                names={t["name"] for t in tools.json()["result"]["tools"]}
+                self.assertIn("run_command", names)
                 large=client.post("/mcp",headers=headers,content=b"x"*1_048_577)
                 self.assertEqual(large.status_code,413)
                 bad=client.post("/mcp",headers={**headers,"Origin":"http://localhost.evil"},json={})

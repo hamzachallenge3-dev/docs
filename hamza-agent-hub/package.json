@@ -1,6 +1,6 @@
 {
   "name": "hamza-agent-hub",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "One MCP plugin for Cursor + ChatGPT/Codex store: Desk + ECC68 + Forge + Tools13 + browse + FreeLLMAPI",
   "main": "dist/index.js",
   "directories": {

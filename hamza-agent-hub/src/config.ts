@@ -33,14 +33,45 @@ export const config = {
   get taskTimeoutMs() {
     return envInt('HAH_TASK_TIMEOUT_MS', 120_000);
   },
+  get modelProvider() {
+    return (process.env.HAH_MODEL_PROVIDER || '').toLowerCase().trim();
+  },
   get modelUrl() {
+    // FreeLLMAPI (open-source free gateway) — default local URL when enabled
+    const freellmapiOn =
+      this.modelProvider === 'freellmapi' ||
+      this.modelProvider === 'lotf' ||
+      this.modelProvider === 'free-llm-api' ||
+      process.env.HAH_USE_FREELLMAPI === '1' ||
+      Boolean(process.env.HAH_FREELLMAPI_URL);
+    if (freellmapiOn) {
+      return (
+        process.env.HAH_FREELLMAPI_URL ||
+        process.env.HAH_MODEL_URL ||
+        process.env.ECC68_MODEL_URL ||
+        'http://127.0.0.1:3001/v1'
+      );
+    }
     return process.env.HAH_MODEL_URL || process.env.ECC68_MODEL_URL || '';
   },
   get modelName() {
+    const freellmapiOn =
+      this.modelProvider === 'freellmapi' ||
+      this.modelProvider === 'lotf' ||
+      this.modelProvider === 'free-llm-api' ||
+      process.env.HAH_USE_FREELLMAPI === '1' ||
+      Boolean(process.env.HAH_FREELLMAPI_URL);
+    if (freellmapiOn) {
+      return process.env.HAH_FREELLMAPI_MODEL || process.env.HAH_MODEL_NAME || 'auto';
+    }
     return process.env.HAH_MODEL_NAME || 'free-local';
   },
   get modelApiKey() {
-    return process.env.HAH_MODEL_API_KEY || '';
+    return (
+      process.env.HAH_FREELLMAPI_KEY ||
+      process.env.HAH_MODEL_API_KEY ||
+      ''
+    );
   },
   /** Named model profiles — lab copies only; never mutate production GLM/Headroom. */
   get modelProfiles() {
@@ -48,6 +79,7 @@ export const config = {
       glm_lab: process.env.HAH_GLM_LAB_URL || '',
       headroom_lab: process.env.HAH_HEADROOM_LAB_URL || '',
       free: process.env.HAH_MODEL_URL || '',
+      freellmapi: process.env.HAH_FREELLMAPI_URL || '',
     };
   },
   get authToken() {

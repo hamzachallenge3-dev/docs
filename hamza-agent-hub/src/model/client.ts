@@ -1,5 +1,10 @@
 import { config, modelConfigured } from '../config.js';
 import { redactSecrets } from '../security/redact.js';
+import {
+  freellmapiChat,
+  freellmapiEnabled,
+  freellmapiStatusSummary,
+} from './freellmapi.js';
 
 export interface ModelMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -8,26 +13,37 @@ export interface ModelMessage {
 }
 
 export function modelStatus() {
+  const freellmapi = freellmapiStatusSummary();
   if (!modelConfigured()) {
     return {
       configured: false,
       readiness: 'blocked' as const,
-      reason: 'HAH_MODEL_URL unset — live model BLOCKED; heuristic path available',
+      reason:
+        'No live model — set HAH_MODEL_PROVIDER=freellmapi (FreeLLMAPI OSS) or HAH_MODEL_URL; heuristic path available',
+      freellmapi,
       profiles: {
         glm_lab: Boolean(config.modelProfiles.glm_lab),
         headroom_lab: Boolean(config.modelProfiles.headroom_lab),
         free: Boolean(config.modelProfiles.free),
+        freellmapi: Boolean(config.modelProfiles.freellmapi) || freellmapi.enabled,
       },
     };
   }
   return {
     configured: true,
     readiness: 'ready' as const,
-    reason: 'OpenAI-compatible free endpoint configured',
+    reason: freellmapiEnabled()
+      ? 'FreeLLMAPI (open-source free gateway) configured'
+      : 'OpenAI-compatible free endpoint configured',
+    provider: freellmapiEnabled() ? 'freellmapi' : 'openai_compatible',
+    model: config.modelName,
+    base_url: config.modelUrl,
+    freellmapi,
     profiles: {
       glm_lab: Boolean(config.modelProfiles.glm_lab),
       headroom_lab: Boolean(config.modelProfiles.headroom_lab),
       free: Boolean(config.modelProfiles.free),
+      freellmapi: freellmapi.enabled,
     },
   };
 }
@@ -40,9 +56,26 @@ export async function callModel(opts: {
 }): Promise<{
   content: string;
   tool_calls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
-  provider: 'live' | 'heuristic';
+  provider: 'live' | 'heuristic' | 'freellmapi';
+  routed_via?: string | null;
+  model?: string;
 }> {
   if (!modelConfigured()) return heuristic(opts);
+
+  if (freellmapiEnabled()) {
+    const r = await freellmapiChat({
+      system: opts.system,
+      messages: opts.messages,
+      tools: opts.tools,
+    });
+    return {
+      provider: 'freellmapi',
+      content: r.content,
+      tool_calls: r.tool_calls,
+      routed_via: r.routed_via,
+      model: r.model,
+    };
+  }
 
   const body = {
     model: config.modelName,
@@ -141,6 +174,40 @@ function heuristic(opts: {
           arguments: {
             path: 'artifacts/agent-browse.md',
             content: `# Agent browse\n\nQuery: ${lastUser.slice(0, 400)}\n\nSee hub_agent_browse tool output for the full catalog hits across packs, agents, tools13, and MCP tools.\n`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (opts.agentId === 'hub-freellmapi' && step === 0 && tools.has('hub_freellmapi_status')) {
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [{ id: 'f0', name: 'hub_freellmapi_status', arguments: {} }],
+    };
+  }
+  if (opts.agentId === 'hub-freellmapi' && step === 1 && tools.has('workspace_write')) {
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [
+        {
+          id: 'f1',
+          name: 'workspace_write',
+          arguments: {
+            path: 'artifacts/freellmapi-connection.json',
+            content: JSON.stringify(
+              {
+                agent: 'hub-freellmapi',
+                task: lastUser.slice(0, 400),
+                provider: 'freellmapi',
+                upstream: 'https://github.com/tashfeenahmed/freellmapi',
+                next: 'Run scripts/connect-freellmapi.sh with HAH_FREELLMAPI_KEY after FreeLLMAPI is up',
+              },
+              null,
+              2
+            ),
           },
         },
       ],

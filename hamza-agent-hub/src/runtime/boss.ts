@@ -36,6 +36,7 @@ const BOOSTS: Array<{ match: RegExp; agent: string; weight: number }> = [
   { match: /github tricks|gitingest|repo intelligence/i, agent: 'forge-github-intelligence', weight: 12 },
   { match: /mine agents|find mcp|skill\.md/i, agent: 'forge-agent-miner', weight: 12 },
   { match: /\bbrowse\b|catalog|directory|list agents|show agents|من هم الوكلاء|تصفح/i, agent: 'hub-agent-browse', weight: 18 },
+  { match: /freellmapi|free.?llm.?api|\blotf\b|model gateway|connect.*model/i, agent: 'hub-freellmapi', weight: 18 },
 ];
 
 function tokens(text: string): string[] {

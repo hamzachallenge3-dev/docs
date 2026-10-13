@@ -12,21 +12,28 @@ All uploaded kits live in **this one plugin** (`hamza-agent-hub/`):
 | Hub Boss Tools Recovery 13 | `packs/tools13/` |
 | Full-roster distributor | `hub-boss` in `packs/hub/` |
 | Catalog browser | `hub-agent-browse` + `hub_agent_browse` |
+| FreeLLMAPI (OSS free gateway) | `hub-freellmapi` + `hub_freellmapi_*` |
 
 `ecc68-lab/` at repo root is a redirect stub only.
 
-## Boss + browse awareness
+## Boss + browse + FreeLLMAPI
 
 `hub-boss`:
 
-- Scores **all 91 agents** (full roster)
+- Scores **all 92 agents** (full roster)
 - Writes `artifacts/hub-full-roster.md`
-- Exposes `hub_full_roster` + `hub_agent_browse` + `hub_tools13_lookup`
+- Exposes `hub_full_roster` + `hub_agent_browse` + `hub_freellmapi_status` + `hub_tools13_lookup`
 
 `hub-agent-browse`:
 
 - Searches packs, agents, tools13, and MCP surface tools
 - Writes `artifacts/agent-browse.md`
+
+`hub-freellmapi`:
+
+- Probes open-source FreeLLMAPI at `http://127.0.0.1:3001/v1`
+- Alias provider: `HAH_MODEL_PROVIDER=lotf`
+- Docs: `docs/FREELLMAPI.md`
 
 ## Latest verified routing
 

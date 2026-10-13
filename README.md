@@ -12,8 +12,9 @@
 | Hub Boss Tools Recovery 13 | `packs/tools13/` |
 | الموزّع الذي يعرف الجميع | `hub-boss` |
 
-- الوكلاء: **91** (hub-boss + hub-agent-browse + 4 desk + 68 ecc + 4 forge + 13 tools13)
-- تصفّح الكل: أداة `hub_agent_browse` / وكيل `hub-agent-browse`
+- الوكلاء: **92** (hub-boss + hub-agent-browse + hub-freellmapi + desk + ecc + forge + tools13)
+- تصفّح الكل: `hub_agent_browse` / `hub-agent-browse`
+- النموذج المجاني: **FreeLLMAPI** (OSS) عبر `hub-freellmapi` — انظر `hamza-agent-hub/docs/FREELLMAPI.md`
 - إعداد Cursor: [`cursor-mcp.hamza-agent-hub.example.json`](./cursor-mcp.hamza-agent-hub.example.json)
 - الدليل: [`hamza-agent-hub/README.md`](./hamza-agent-hub/README.md)
 

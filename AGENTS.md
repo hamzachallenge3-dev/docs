@@ -15,12 +15,13 @@
 ## Hamza Agent Hub (one plugin only)
 
 - **Single MCP plugin:** `hamza-agent-hub/` — Desk + ECC68 + Forge + Tools13
-- Boss with full roster: `hub-boss` (91 agents)
-- Catalog browser: `hub-agent-browse` / MCP tool `hub_agent_browse` (packs + agents + tools13 + MCP)
+- Boss with full roster: `hub-boss` (92 agents)
+- Catalog browser: `hub-agent-browse` / MCP tool `hub_agent_browse`
+- Free model gateway: FreeLLMAPI (OSS) via `HAH_MODEL_PROVIDER=freellmapi` (alias `lotf`) — `hub-freellmapi`
 - `ecc68-lab/` is a redirect stub only — do not install it as a separate MCP server
 - Cursor MCP example: `cursor-mcp.hamza-agent-hub.example.json`
 - Do not mutate production Hamza Agent Hub or production GLM/Headroom
-- Live model requires `HAH_MODEL_URL` (free endpoint only); without it live path is BLOCKED
+- Live model: FreeLLMAPI at `http://127.0.0.1:3001/v1` (or any free OpenAI-compatible URL)
 
 ## Terminology
 

@@ -10,13 +10,15 @@
 | Hub Boss Tools Recovery 13 | `packs/tools13/` |
 | الموزّع الذي يعرف الجميع | `hub-boss` في `packs/hub/` |
 | متصفح الكتالوج | `hub-agent-browse` + أداة `hub_agent_browse` |
+| FreeLLMAPI (مجاني مفتوح المصدر) | `hub-freellmapi` + `hub_freellmapi_*` |
 
 لا تثبّت `ecc68-lab` كإضافة منفصلة — دُمجت هنا.
 
-## الوكلاء: 91
+## الوكلاء: 92
 
 - **1** `hub-boss` — يعرف الدليل الكامل ويفرّق المهام على الجميع
 - **1** `hub-agent-browse` — يتصفّح كل الـ packs / الوكلاء / tools13 / أدوات MCP
+- **1** `hub-freellmapi` — يربط FreeLLMAPI (بوابة LLM مجانية مفتوحة المصدر)
 - **4** Desk
 - **68** ECC
 - **4** Forge
@@ -24,7 +26,7 @@
 
 ## أدوات MCP الرئيسية
 
-`hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_agent_browse` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task` · `clean_leads` · `sheets_to_json` · `extract_contacts` · `seo_audit_html` · `forge_detect` · `github_url_tricks` · `agent_mining_queries`
+`hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_agent_browse` · `hub_freellmapi_status` · `hub_freellmapi_chat` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task` · `clean_leads` · `sheets_to_json` · `extract_contacts` · `seo_audit_html` · `forge_detect` · `github_url_tricks` · `agent_mining_queries`
 
 ## تثبيت واحد
 
@@ -82,10 +84,31 @@ run_agent(
 
 يعيد packs + agents + tools13 + MCP tools، ويكتب `artifacts/agent-browse.md`.
 
+## FreeLLMAPI (النموذج المجاني مفتوح المصدر)
+
+```bash
+# 1) شغّل FreeLLMAPI محلياً (انظر docs/FREELLMAPI.md)
+# 2) اربط الإضافة:
+export HAH_FREELLMAPI_KEY='freellmapi-…'
+./scripts/connect-freellmapi.sh
+./scripts/start.sh
+```
+
+أو في `.env`:
+```
+HAH_MODEL_PROVIDER=freellmapi   # alias: lotf
+HAH_FREELLMAPI_URL=http://127.0.0.1:3001/v1
+HAH_FREELLMAPI_MODEL=auto
+HAH_FREELLMAPI_KEY=freellmapi-…
+```
+
+أدوات: `hub_freellmapi_status` · `hub_freellmapi_chat`  
+دليل: [`docs/FREELLMAPI.md`](docs/FREELLMAPI.md)
+
 ## حدود صريحة
 
 - مختبر جديد — لا يعدّل إنتاج Hamza Agent Hub ولا GLM/Headroom الإنتاجي
-- بدون `HAH_MODEL_URL` النموذج الحي = BLOCKED (المسار heuristic يعمل للاختبار)
+- بدون FreeLLMAPI / `HAH_MODEL_URL` النموذج الحي = BLOCKED (المسار heuristic يعمل للاختبار)
 - أوزان GLM/Kimi غير مضمّنة (روابط فقط في `packs/tools13/MODELS.md`)
 
 ## التحقق

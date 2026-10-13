@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { assertCatalog, listAgents, PACKS } from '../src/runtime/registry.js';
 import { buildBossDirectory, planWithBoss, scoreAllAgents } from '../src/runtime/boss.js';
 import { browseEverything, MCP_SURFACE_TOOLS } from '../src/runtime/browse.js';
+import {
+  freellmapiEnabled,
+  freellmapiBaseUrl,
+  freellmapiChat,
+  FREELLMAPI_DEFAULT_URL,
+} from '../src/model/freellmapi.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../src/packs/desk/tools.js';
 import { forgeDetect, githubUrlTricks } from '../src/packs/forge/tools.js';
 import { loadTools13Manifest } from '../src/packs/tools13/registry.js';
@@ -16,6 +22,10 @@ function tempEnv() {
   process.env.HAH_WORKSPACES_DIR = path.join(base, 'workspaces');
   process.env.HAH_DB_PATH = path.join(base, 'data', 't.sqlite');
   delete process.env.HAH_MODEL_URL;
+  delete process.env.HAH_MODEL_PROVIDER;
+  delete process.env.HAH_USE_FREELLMAPI;
+  delete process.env.HAH_FREELLMAPI_URL;
+  delete process.env.HAH_FREELLMAPI_KEY;
   fs.mkdirSync(process.env.HAH_DATA_DIR, { recursive: true });
   fs.mkdirSync(process.env.HAH_WORKSPACES_DIR, { recursive: true });
 }
@@ -29,12 +39,12 @@ describe('hamza agent hub', () => {
     closeDb();
   });
 
-  it('catalog has hub+browse+desk+forge+tools13+68 ecc agents', () => {
+  it('catalog has hub+browse+freellmapi+desk+forge+tools13+68 ecc agents', () => {
     assertCatalog();
     expect(PACKS.map((p) => p.id)).toContain('tools13');
-    expect(listAgents()).toHaveLength(91);
+    expect(listAgents()).toHaveLength(92);
     expect(listAgents('hub').map((a) => a.id)).toEqual(
-      expect.arrayContaining(['hub-boss', 'hub-agent-browse'])
+      expect.arrayContaining(['hub-boss', 'hub-agent-browse', 'hub-freellmapi'])
     );
     expect(listAgents('ecc68')).toHaveLength(68);
     expect(listAgents('tools13')).toHaveLength(13);
@@ -43,7 +53,7 @@ describe('hamza agent hub', () => {
 
   it('hub_agent_browse searches everything in the one plugin', () => {
     const all = browseEverything({ query: '' });
-    expect(all.total_agents).toBe(91);
+    expect(all.total_agents).toBe(92);
     expect(all.counts.ecc68).toBe(68);
     expect(all.hits.some((h) => h.kind === 'pack' && h.id === 'tools13')).toBe(true);
     expect(all.hits.some((h) => h.kind === 'agent' && h.id === 'hub-agent-browse')).toBe(true);
@@ -69,10 +79,65 @@ describe('hamza agent hub', () => {
       expect(dir).toContain(a.id);
     }
     const plan = planWithBoss('SEO audit this HTML page title and meta description');
-    expect(plan.roster_size).toBe(91);
+    expect(plan.roster_size).toBe(92);
     expect(plan.known_packs).toEqual(expect.arrayContaining(['hub', 'desk', 'ecc68', 'forge', 'tools13']));
     expect(plan.primary).toBe('tool13-seo-audit');
     expect(planWithBoss('Browse the catalog and list agents for SEO').primary).toBe('hub-agent-browse');
+    expect(planWithBoss('Connect FreeLLMAPI lotf model gateway').primary).toBe('hub-freellmapi');
+  });
+
+  it('FreeLLMAPI provider wiring (open-source free gateway)', async () => {
+    expect(freellmapiEnabled()).toBe(false);
+    process.env.HAH_MODEL_PROVIDER = 'lotf';
+    expect(freellmapiEnabled()).toBe(true);
+    expect(freellmapiBaseUrl()).toBe(FREELLMAPI_DEFAULT_URL);
+
+    process.env.HAH_FREELLMAPI_URL = 'http://127.0.0.1:3999/v1';
+    process.env.HAH_FREELLMAPI_KEY = 'freellmapi-test';
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(_url);
+      if (u.endsWith('/models')) {
+        return new Response(JSON.stringify({ data: [{ id: 'auto' }, { id: 'gemini-flash' }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (u.endsWith('/chat/completions')) {
+        const body = JSON.parse(String(init?.body || '{}'));
+        expect(body.model).toBe('auto');
+        return new Response(
+          JSON.stringify({
+            model: 'auto',
+            choices: [{ message: { role: 'assistant', content: 'hello from freellmapi', tool_calls: [] } }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'x-routed-via': 'groq/llama' } }
+        );
+      }
+      return new Response('not found', { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const { probeFreellmapi } = await import('../src/model/freellmapi.js');
+      const probe = await probeFreellmapi(1000);
+      expect(probe.ok).toBe(true);
+      expect(probe.models_count).toBe(2);
+      const chat = await freellmapiChat({
+        system: 'sys',
+        messages: [{ role: 'user', content: 'hi' }],
+        tools: [],
+      });
+      expect(chat.provider).toBe('freellmapi');
+      expect(chat.content).toContain('freellmapi');
+      expect(chat.routed_via).toBe('groq/llama');
+      expect(MCP_SURFACE_TOOLS).toContain('hub_freellmapi_status');
+      expect(MCP_SURFACE_TOOLS).toContain('hub_freellmapi_chat');
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.HAH_MODEL_PROVIDER;
+      delete process.env.HAH_FREELLMAPI_URL;
+      delete process.env.HAH_FREELLMAPI_KEY;
+    }
   });
 
   it('boss routes desk / ecc / tools13 correctly', () => {
@@ -115,12 +180,13 @@ describe('hamza agent hub', () => {
     expect(fs.existsSync(path.join(ws, 'hub-routing-plan.json'))).toBe(true);
     expect(fs.existsSync(path.join(ws, 'hub-full-roster.md'))).toBe(true);
     const plan = JSON.parse(fs.readFileSync(path.join(ws, 'hub-routing-plan.json'), 'utf8'));
-    expect(plan.roster_size).toBe(91);
+    expect(plan.roster_size).toBe(92);
     const roster = fs.readFileSync(path.join(ws, 'hub-full-roster.md'), 'utf8');
     expect(roster).toContain('tool13-seo-audit');
     expect(roster).toContain('ecc-security-reviewer');
     expect(roster).toContain('desk-lead-cleaner');
     expect(roster).toContain('hub-agent-browse');
+    expect(roster).toContain('hub-freellmapi');
   });
 
   it('end-to-end hub-agent-browse writes browse artifact', async () => {

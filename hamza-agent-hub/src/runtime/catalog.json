@@ -9,6 +9,7 @@
       "hub_list_agents",
       "hub_full_roster",
       "hub_agent_browse",
+      "hub_freellmapi_status",
       "hub_tools13_lookup",
       "dispatch_agent",
       "workspace_write",
@@ -19,6 +20,23 @@
     "model_ready": false,
     "tested": false,
     "profile": "packs/hub/agents/hub-boss.md"
+  },
+  {
+    "id": "hub-freellmapi",
+    "pack": "hub",
+    "category": "model_gateway",
+    "description": "Connects Hamza Agent Hub to FreeLLMAPI — open-source free OpenAI-compatible LLM gateway (auto-routing across free tiers).",
+    "tools": [
+      "hub_freellmapi_status",
+      "hub_freellmapi_chat",
+      "hub_agent_browse",
+      "workspace_write",
+      "workspace_list",
+      "workspace_read"
+    ],
+    "model_ready": false,
+    "tested": true,
+    "profile": "packs/hub/agents/hub-freellmapi.md"
   },
   {
     "id": "hub-agent-browse",

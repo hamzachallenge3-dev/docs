@@ -7,6 +7,7 @@ import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge
 import { listAgents, PACKS } from '../runtime/registry.js';
 import { buildBossDirectory } from '../runtime/boss.js';
 import { browseAgentDetail, browseEverything } from '../runtime/browse.js';
+import { freellmapiChat, freellmapiStatusSummary, probeFreellmapi } from '../model/freellmapi.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
 import { seoAuditHtml } from '../packs/tools13/seo.js';
 import { spawnSync } from 'node:child_process';
@@ -41,6 +42,33 @@ export async function runTool(
       }
       case 'hub_full_roster':
         return { ok: true, name: call.name, output: buildBossDirectory() };
+      case 'hub_freellmapi_status': {
+        const probe = await probeFreellmapi();
+        return {
+          ok: probe.ok,
+          name: call.name,
+          output: JSON.stringify({ config: freellmapiStatusSummary(), probe }, null, 2),
+        };
+      }
+      case 'hub_freellmapi_chat': {
+        const prompt = String(call.arguments.prompt || call.arguments.message || '');
+        if (!prompt.trim()) return { ok: false, name: call.name, output: 'prompt required' };
+        try {
+          const result = await freellmapiChat({
+            system: String(call.arguments.system || 'You are a helpful assistant for Hamza Agent Hub lab.'),
+            messages: [{ role: 'user', content: prompt }],
+            tools: [],
+            model: call.arguments.model ? String(call.arguments.model) : undefined,
+          });
+          return { ok: true, name: call.name, output: JSON.stringify(result, null, 2) };
+        } catch (err) {
+          return {
+            ok: false,
+            name: call.name,
+            output: err instanceof Error ? err.message : String(err),
+          };
+        }
+      }
       case 'hub_agent_browse': {
         const agentId = call.arguments.agent_id ? String(call.arguments.agent_id) : '';
         if (agentId) {

@@ -5,6 +5,12 @@ import { cancelTask, enqueueAgentTask, queueStats, startQueue } from '../runtime
 import { getTask, listEvents } from '../storage/db.js';
 import { modelStatus } from '../model/client.js';
 import { config } from '../config.js';
+import {
+  freellmapiChat,
+  freellmapiEnabled,
+  freellmapiStatusSummary,
+  probeFreellmapi,
+} from '../model/freellmapi.js';
 import { buildBossDirectory, planWithBoss } from '../runtime/boss.js';
 import { browseAgentDetail, browseEverything } from '../runtime/browse.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.js';
@@ -44,6 +50,8 @@ export function createHamzaHubServer(): McpServer {
       boss_knows_all: Boolean(getAgent('hub-boss')?.tools.includes('hub_full_roster')),
       agent_browse: Boolean(getAgent('hub-agent-browse')?.tools.includes('hub_agent_browse')),
       hub_agents: listAgents('hub').length,
+      freellmapi: freellmapiStatusSummary(),
+      freellmapi_live: freellmapiEnabled() && model.configured,
       queue: queueStats(),
       model,
       storage: { db_exists: fs.existsSync(config.dbPath) },
@@ -52,6 +60,51 @@ export function createHamzaHubServer(): McpServer {
       error,
     });
   });
+
+  server.tool(
+    'hub_freellmapi_status',
+    'Probe FreeLLMAPI (open-source free LLM gateway) — /v1/models health, catalog sample, connection hints',
+    {},
+    async () => jsonText({ config: freellmapiStatusSummary(), probe: await probeFreellmapi() })
+  );
+
+  server.tool(
+    'hub_freellmapi_chat',
+    'Send a one-shot chat completion through FreeLLMAPI (model=auto by default). Lab only — free tiers.',
+    {
+      prompt: z.string(),
+      system: z.string().optional(),
+      model: z.string().optional(),
+    },
+    async ({ prompt, system, model }) => {
+      if (!freellmapiEnabled() && !config.modelUrl) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: 'FreeLLMAPI not enabled. Run scripts/connect-freellmapi.sh or set HAH_MODEL_PROVIDER=freellmapi',
+            },
+          ],
+        };
+      }
+      try {
+        // Temporarily treat as enabled for this call if MODEL_URL already points at a gateway
+        const result = await freellmapiChat({
+          system: system || 'You are a helpful assistant for Hamza Agent Hub lab.',
+          messages: [{ role: 'user', content: prompt }],
+          tools: [],
+          model,
+        });
+        return jsonText(result);
+      } catch (err) {
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }],
+        };
+      }
+    }
+  );
 
   server.tool('hub_list_packs', 'List Hub packs (hub, desk, ecc68, forge)', {}, async () =>
     jsonText({ packs: PACKS })

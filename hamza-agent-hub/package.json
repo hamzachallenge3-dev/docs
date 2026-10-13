@@ -1,7 +1,7 @@
 {
   "name": "hamza-agent-hub",
   "version": "1.0.0",
-  "description": "One MCP plugin: Desk + ECC68 + Forge + Tools13 + agent browse (91 agents, hub-boss)",
+  "description": "One MCP plugin: Desk + ECC68 + Forge + Tools13 + browse + FreeLLMAPI (92 agents)",
   "main": "dist/index.js",
   "directories": {
     "doc": "docs",

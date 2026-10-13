@@ -9,6 +9,8 @@ export const MCP_SURFACE_TOOLS = [
   'hub_list_agents',
   'hub_full_roster',
   'hub_agent_browse',
+  'hub_freellmapi_status',
+  'hub_freellmapi_chat',
   'hub_boss_route',
   'hub_tools13_lookup',
   'run_agent',

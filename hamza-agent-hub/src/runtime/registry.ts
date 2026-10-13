@@ -78,8 +78,8 @@ export function loadRoleInstructions(agentId: string): string {
 
 export function assertCatalog(): void {
   const ids = catalog.map((a) => a.id);
-  if (ids.length < 86) {
-    throw new Error(`expected >=86 agents (hub+browse+desk+forge+ecc68+tools13), got ${ids.length}`);
+  if (ids.length < 87) {
+    throw new Error(`expected >=87 agents (hub+browse+freellmapi+desk+forge+ecc68+tools13), got ${ids.length}`);
   }
   if (new Set(ids).size !== ids.length) throw new Error('duplicate agent ids');
   const packs = new Set(catalog.map((a) => a.pack));

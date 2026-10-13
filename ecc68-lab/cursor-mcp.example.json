@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "ecc68-lab": {
+      "command": "node",
+      "args": ["--experimental-sqlite", "/ABSOLUTE/PATH/TO/ecc68-lab/dist/index.js"],
+      "env": {
+        "ECC68_TRANSPORT": "stdio",
+        "ECC68_CONCURRENCY": "2",
+        "ECC68_DATA_DIR": "/ABSOLUTE/PATH/TO/ecc68-lab/data",
+        "ECC68_WORKSPACES_DIR": "/ABSOLUTE/PATH/TO/ecc68-lab/workspaces",
+        "ECC68_MODEL_URL": "",
+        "ECC68_MODEL_NAME": "free-local"
+      }
+    }
+  }
+}

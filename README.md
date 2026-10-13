@@ -1,5 +1,12 @@
 # Mintlify Starter Kit
 
+## ECC68 MCP plugin (lab)
+
+A real authenticated MCP plugin with 68 agents lives in [`ecc68-lab/`](./ecc68-lab/).  
+The orchestrator that routes work is `ecc-chief-of-staff`. See [`ecc68-lab/README.md`](./ecc68-lab/README.md).
+
+---
+
 Use the starter kit to get your docs deployed and ready to customize.
 
 Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with

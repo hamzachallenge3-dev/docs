@@ -12,6 +12,12 @@
 - Use the Mintlify MCP server, `https://mcp.mintlify.com`, to edit content and settings via MCP
 - Use the Mintlify docs MCP server, `https://www.mintlify.com/docs/mcp`, to query information about using Mintlify via MCP
 
+## ECC68 lab
+
+- Runnable MCP plugin source is under `ecc68-lab/` (isolated from production hubs)
+- `ecc-chief-of-staff` differentiates tasks and assigns specialist agents
+- Do not invent paid model calls; live model requires `ECC68_MODEL_URL`
+
 ## Terminology
 
 {/* Add product-specific terms and preferred usage */}

@@ -1,4 +1,4 @@
-import { listAgents } from './registry.js';
+import { listAgents, PACKS, type AgentDef } from './registry.js';
 
 export interface HubPlan {
   orchestrator: string;
@@ -6,78 +6,148 @@ export interface HubPlan {
   primary: string;
   secondary: string[];
   rationale: string;
+  roster_size: number;
+  known_packs: string[];
+  considered_top: Array<{ agent_id: string; pack: string; score: number }>;
   decomposition: Array<{ agent_id: string; pack: string; subtask: string }>;
 }
 
-const RULES: Array<{ agent: string; pack: string; keywords: string[]; weight: number }> = [
-  // Desk
-  { agent: 'desk-inbox-to-lead', pack: 'desk', keywords: ['inbox', 'lead', 'email triage', 'reply draft', 'بريدد'], weight: 12 },
-  { agent: 'desk-weekly-report', pack: 'desk', keywords: ['weekly report', 'kpi', 'this week', 'تقرير أسبوعي'], weight: 12 },
-  { agent: 'desk-meeting-to-action', pack: 'desk', keywords: ['meeting', 'notes', 'action items', 'اجتماع', 'محضر'], weight: 12 },
-  { agent: 'desk-lead-cleaner', pack: 'desk', keywords: ['clean leads', 'dedupe email', 'csv emails'], weight: 11 },
-  // Forge
-  { agent: 'forge-github-intelligence', pack: 'forge', keywords: ['github', 'repo tricks', 'gitingest'], weight: 10 },
-  { agent: 'forge-agent-miner', pack: 'forge', keywords: ['mine agents', 'find mcp', 'skill.md', 'discover skills'], weight: 11 },
-  { agent: 'forge-detect', pack: 'forge', keywords: ['which forge', 'gitlab', 'bitbucket', 'codeberg'], weight: 9 },
-  { agent: 'forge-skill-pack-builder', pack: 'forge', keywords: ['skill pack', 'build pack', 'curate skills'], weight: 9 },
-  // ECC (subset of strongest routers — boss can still pick any via keyword overlap)
-  { agent: 'ecc-security-reviewer', pack: 'ecc68', keywords: ['security', 'xss', 'sql injection', 'أمن'], weight: 10 },
-  { agent: 'ecc-python-reviewer', pack: 'ecc68', keywords: ['python', '.py', 'django', 'fastapi'], weight: 8 },
-  { agent: 'ecc-typescript-reviewer', pack: 'ecc68', keywords: ['typescript', '.ts', 'tsx'], weight: 8 },
-  { agent: 'ecc-react-reviewer', pack: 'ecc68', keywords: ['react', 'jsx', 'next.js'], weight: 8 },
-  { agent: 'ecc-code-reviewer', pack: 'ecc68', keywords: ['code review', 'مراجعة كود'], weight: 6 },
-  { agent: 'ecc-chief-of-staff', pack: 'ecc68', keywords: ['ecc only', 'coding agents only'], weight: 5 },
-  { agent: 'ecc-planner', pack: 'ecc68', keywords: ['implementation plan', 'خطة تقنية'], weight: 7 },
-  { agent: 'ecc-doc-updater', pack: 'ecc68', keywords: ['documentation', 'readme', 'توثيق'], weight: 7 },
-  { agent: 'ecc-build-error-resolver', pack: 'ecc68', keywords: ['build error', 'compile fail'], weight: 9 },
+/** Extra keyword boosts — boss still scores EVERY agent from the full roster. */
+const BOOSTS: Array<{ match: RegExp; agent: string; weight: number }> = [
+  { match: /seo|meta description|canonical|open.?graph|json-?ld/i, agent: 'tool13-seo-audit', weight: 20 },
+  { match: /lapian|film pack|video frame|ffmpeg|subtitle/i, agent: 'tool13-lapian-notes', weight: 20 },
+  { match: /nanomuse|nano.?muse/i, agent: 'tool13-nanomuse', weight: 16 },
+  { match: /\bn8n\b|workflow library/i, agent: 'tool13-n8n-library', weight: 16 },
+  { match: /scrapling|scrape|crawler/i, agent: 'tool13-scrapling', weight: 14 },
+  { match: /\bgoose\b|goose cli/i, agent: 'tool13-goose', weight: 14 },
+  { match: /headroom|context compression/i, agent: 'tool13-headroom', weight: 14 },
+  { match: /agent.?reach|research web/i, agent: 'tool13-agent-reach', weight: 14 },
+  { match: /munder|difflin|multi.?agent orchestr/i, agent: 'tool13-munder-difflin', weight: 14 },
+  { match: /open generative|ai video|image gen/i, agent: 'tool13-open-generative-ai', weight: 12 },
+  { match: /glm-?5\.?3|kimi.?k3/i, agent: 'tool13-glm-5.3-flash', weight: 10 },
+  { match: /inbox|lead triage|بريد/i, agent: 'desk-inbox-to-lead', weight: 14 },
+  { match: /weekly report|تقرير أسبوعي/i, agent: 'desk-weekly-report', weight: 14 },
+  { match: /meeting|action items|محضر|اجتماع/i, agent: 'desk-meeting-to-action', weight: 14 },
+  { match: /clean leads|dedupe email/i, agent: 'desk-lead-cleaner', weight: 14 },
+  { match: /security|sql injection|xss|أمن/i, agent: 'ecc-security-reviewer', weight: 16 },
+  { match: /python|\.py\b|django|fastapi/i, agent: 'ecc-python-reviewer', weight: 12 },
+  { match: /typescript|\.ts\b|tsx/i, agent: 'ecc-typescript-reviewer', weight: 12 },
+  { match: /react|jsx|next\.js/i, agent: 'ecc-react-reviewer', weight: 12 },
+  { match: /github tricks|gitingest|repo intelligence/i, agent: 'forge-github-intelligence', weight: 12 },
+  { match: /mine agents|find mcp|skill\.md/i, agent: 'forge-agent-miner', weight: 12 },
 ];
 
+function tokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9\u0600-\u06ff.+_-]+/)
+    .filter((t) => t.length >= 3);
+}
+
+/** Score every known agent so boss has awareness of the full roster. */
+export function scoreAllAgents(task: string): Array<{ agent: AgentDef; score: number }> {
+  const taskTokens = new Set(tokens(task));
+  const lower = task.toLowerCase();
+  const agents = listAgents().filter((a) => a.id !== 'hub-boss');
+
+  return agents
+    .map((agent) => {
+      let score = 0;
+      const hay = tokens(`${agent.id} ${agent.pack} ${agent.category} ${agent.description}`);
+      for (const t of hay) {
+        if (taskTokens.has(t)) score += 2;
+      }
+      // id fragment match (e.g. security-reviewer)
+      for (const part of agent.id.split('-')) {
+        if (part.length >= 4 && lower.includes(part)) score += 3;
+      }
+      for (const boost of BOOSTS) {
+        if (boost.agent === agent.id && boost.match.test(task)) score += boost.weight;
+      }
+      // pack affinity words
+      if (agent.pack === 'desk' && /lead|email|csv|meeting|report|inbox/i.test(task)) score += 2;
+      if (agent.pack === 'ecc68' && /code|review|bug|build|python|typescript|security/i.test(task)) score += 2;
+      if (agent.pack === 'forge' && /github|gitlab|forge|mcp|skill/i.test(task)) score += 2;
+      if (agent.pack === 'tools13' && /seo|video|n8n|goose|scrap|headroom|nanomuse|glm|kimi/i.test(task)) score += 2;
+      return { agent, score };
+    })
+    .sort((a, b) => b.score - a.score || a.agent.id.localeCompare(b.agent.id));
+}
+
+/**
+ * hub-boss: differentiates work using FULL knowledge of every registered agent.
+ */
 export function planWithBoss(task: string): HubPlan {
-  const lower = ` ${task.toLowerCase()} `;
-  const scores = new Map<string, { score: number; pack: string }>();
-  for (const rule of RULES) {
-    let s = 0;
-    for (const kw of rule.keywords) if (lower.includes(kw.toLowerCase())) s += rule.weight;
-    if (s > 0) scores.set(rule.agent, { score: (scores.get(rule.agent)?.score ?? 0) + s, pack: rule.pack });
-  }
-  const ranked = [...scores.entries()]
-    .map(([agent, v]) => ({ agent, ...v }))
-    .sort((a, b) => b.score - a.score);
-
-  let primary = ranked[0]?.agent || 'ecc-planner';
-  let pack = ranked[0]?.pack || 'ecc68';
-  // Boss never assigns itself as primary worker
-  if (primary === 'hub-boss') {
-    primary = ranked[1]?.agent || 'ecc-planner';
-    pack = ranked[1]?.pack || 'ecc68';
-  }
-
-  const secondary = ranked.filter((r) => r.agent !== primary).slice(0, 2);
-  const byId = new Map(listAgents().map((a) => [a.id, a]));
+  const ranked = scoreAllAgents(task);
+  const roster = listAgents();
+  const top = ranked[0];
+  const primary = top && top.score > 0 ? top.agent.id : 'ecc-planner';
+  const pack = top && top.score > 0 ? top.agent.pack : 'ecc68';
+  const secondary = ranked
+    .filter((r) => r.agent.id !== primary && r.score > 0)
+    .slice(0, 3)
+    .map((r) => r.agent);
 
   return {
     orchestrator: 'hub-boss',
     pack,
     primary,
-    secondary: secondary.map((s) => s.agent),
+    secondary: secondary.map((a) => a.id),
+    roster_size: roster.length,
+    known_packs: [...new Set(roster.map((a) => a.pack))],
+    considered_top: ranked.slice(0, 8).map((r) => ({
+      agent_id: r.agent.id,
+      pack: r.agent.pack,
+      score: r.score,
+    })),
     rationale:
-      ranked.length > 0
-        ? `Hub boss matched → ${ranked
-            .slice(0, 4)
-            .map((r) => `${r.agent}@${r.pack}(${r.score})`)
-            .join(', ')}`
-        : 'No strong match; defaulted to ecc-planner',
+      top && top.score > 0
+        ? `Boss scored all ${roster.length} agents; top=${primary}@${pack}(${top.score})`
+        : `Boss scored all ${roster.length} agents; no strong match → ecc-planner`,
     decomposition: [
       {
         agent_id: primary,
         pack,
-        subtask: `Primary (${byId.get(primary)?.category || 'role'}): ${task}`,
+        subtask: `Primary: ${task}`,
       },
-      ...secondary.map((s) => ({
-        agent_id: s.agent,
-        pack: s.pack,
-        subtask: `Support from ${s.pack}: ${task}`,
+      ...secondary.map((a) => ({
+        agent_id: a.id,
+        pack: a.pack,
+        subtask: `Support (${a.pack}/${a.category}): ${task}`,
       })),
     ],
   };
+}
+
+/** Full directory text injected into hub-boss system prompt — awareness of everyone. */
+export function buildBossDirectory(): string {
+  const agents = listAgents();
+  const byPack = new Map<string, AgentDef[]>();
+  for (const a of agents) {
+    const list = byPack.get(a.pack) || [];
+    list.push(a);
+    byPack.set(a.pack, list);
+  }
+  const lines: string[] = [
+    `# FULL AGENT ROSTER (${agents.length} agents)`,
+    'You KNOW every agent below. When routing, pick from this complete directory — never invent IDs.',
+    '',
+  ];
+  for (const pack of PACKS) {
+    const list = byPack.get(pack.id) || [];
+    lines.push(`## Pack: ${pack.id} — ${pack.name} (${list.length})`);
+    lines.push(pack.description);
+    for (const a of list) {
+      lines.push(`- ${a.id} [${a.category}]: ${a.description.slice(0, 160)}`);
+    }
+    lines.push('');
+  }
+  // any unexpected packs
+  for (const [packId, list] of byPack) {
+    if (PACKS.some((p) => p.id === packId)) continue;
+    lines.push(`## Pack: ${packId} (${list.length})`);
+    for (const a of list) lines.push(`- ${a.id}: ${a.description.slice(0, 160)}`);
+    lines.push('');
+  }
+  return lines.join('\n');
 }

@@ -5,6 +5,11 @@ import { redactSecrets } from '../security/redact.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.js';
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
 import { listAgents, PACKS } from '../runtime/registry.js';
+import { buildBossDirectory } from '../runtime/boss.js';
+import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
+import { seoAuditHtml } from '../packs/tools13/seo.js';
+import { spawnSync } from 'node:child_process';
+import { ROOT } from '../config.js';
 
 export interface ToolCall {
   name: string;
@@ -32,6 +37,71 @@ export async function runTool(
             2
           ),
         };
+      }
+      case 'hub_full_roster':
+        return { ok: true, name: call.name, output: buildBossDirectory() };
+      case 'hub_tools13_lookup': {
+        const q = String(call.arguments.query || call.arguments.id || '');
+        if (!q || q === '*' || q === 'all') {
+          return { ok: true, name: call.name, output: JSON.stringify(loadTools13Manifest(), null, 2) };
+        }
+        const hit = lookupTool13(q);
+        return {
+          ok: Boolean(hit),
+          name: call.name,
+          output: hit ? JSON.stringify(hit, null, 2) : `tool13 not found: ${q}`,
+        };
+      }
+      case 'seo_audit_html': {
+        const html = String(call.arguments.html || '');
+        const url = String(call.arguments.url || 'https://example.com/');
+        if (!html.trim()) return { ok: false, name: call.name, output: 'html required' };
+        return { ok: true, name: call.name, output: JSON.stringify(seoAuditHtml(html, url), null, 2) };
+      }
+      case 'film_pack_prepare': {
+        const video = String(call.arguments.video_path || '');
+        const outRel = String(call.arguments.out_path || 'artifacts/lapian-analysis-pack.zip');
+        if (!video) return { ok: false, name: call.name, output: 'video_path required' };
+        const script = path.join(ROOT, 'packs/tools13/runtime/lapian-notes/scripts/film_pack.py');
+        if (!fs.existsSync(script)) {
+          return { ok: false, name: call.name, output: 'film_pack.py missing from tools13 runtime' };
+        }
+        const outAbs = resolveSafePath(workspaceRoot, outRel);
+        fs.mkdirSync(path.dirname(outAbs), { recursive: true });
+        // video path must be inside workspace for safety
+        let videoAbs: string;
+        try {
+          videoAbs = resolveSafePath(workspaceRoot, video);
+        } catch {
+          return { ok: false, name: call.name, output: 'video_path must be inside the workspace' };
+        }
+        if (!fs.existsSync(videoAbs)) {
+          return {
+            ok: false,
+            name: call.name,
+            output: JSON.stringify({
+              ok: false,
+              error: 'video file not found in workspace',
+              hint: 'Place a video under the workspace then retry. Requires ffmpeg/ffprobe on host.',
+            }),
+          };
+        }
+        const interval = Number(call.arguments.interval || 2);
+        const maxFrames = Number(call.arguments.max_frames || 36);
+        const cp = spawnSync(
+          'python3',
+          [script, videoAbs, '--out', outAbs, '--interval', String(interval), '--max-frames', String(maxFrames)],
+          { encoding: 'utf8', timeout: 120_000 }
+        );
+        const text = (cp.stdout || cp.stderr || '').trim();
+        if (cp.status !== 0) {
+          return {
+            ok: false,
+            name: call.name,
+            output: text || `film_pack failed (is ffmpeg installed?): ${cp.error?.message || ''}`,
+          };
+        }
+        return { ok: true, name: call.name, output: text, artifact: outRel };
       }
       case 'clean_leads':
         return {

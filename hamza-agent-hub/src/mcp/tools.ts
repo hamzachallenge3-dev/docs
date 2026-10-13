@@ -5,9 +5,11 @@ import { cancelTask, enqueueAgentTask, queueStats, startQueue } from '../runtime
 import { getTask, listEvents } from '../storage/db.js';
 import { modelStatus } from '../model/client.js';
 import { config } from '../config.js';
-import { planWithBoss } from '../runtime/boss.js';
+import { buildBossDirectory, planWithBoss } from '../runtime/boss.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.js';
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
+import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
+import { seoAuditHtml } from '../packs/tools13/seo.js';
 import fs from 'node:fs';
 
 function jsonText(data: unknown) {
@@ -36,6 +38,9 @@ export function createHamzaHubServer(): McpServer {
       ecc68_agents: listAgents('ecc68').length,
       desk_agents: listAgents('desk').length,
       forge_agents: listAgents('forge').length,
+      tools13_agents: listAgents('tools13').length,
+      tools13_manifest: loadTools13Manifest().length,
+      boss_knows_all: Boolean(getAgent('hub-boss')?.tools.includes('hub_full_roster')),
       queue: queueStats(),
       model,
       storage: { db_exists: fs.existsSync(config.dbPath) },
@@ -68,9 +73,36 @@ export function createHamzaHubServer(): McpServer {
 
   server.tool(
     'hub_boss_route',
-    'Preview how hub-boss would differentiate and assign a mission across packs',
+    'Preview how hub-boss would differentiate and assign a mission using FULL roster awareness',
     { task: z.string() },
     async ({ task }) => jsonText(planWithBoss(task))
+  );
+
+  server.tool(
+    'hub_full_roster',
+    'Return the complete agent directory that hub-boss knows (all packs)',
+    {},
+    async () => jsonText({ count: listAgents().length, directory: buildBossDirectory() })
+  );
+
+  server.tool(
+    'hub_tools13_lookup',
+    'List or look up the 13 Hub Boss recovery tools',
+    { query: z.string().optional() },
+    async ({ query }) => {
+      if (!query || query === '*' || query === 'all') return jsonText(loadTools13Manifest());
+      const hit = lookupTool13(query);
+      return hit
+        ? jsonText(hit)
+        : { isError: true, content: [{ type: 'text' as const, text: `not found: ${query}` }] };
+    }
+  );
+
+  server.tool(
+    'seo_audit_html',
+    'Free Marketing SEO Audit on local HTML (tools13) — no Okara, no posting',
+    { html: z.string(), url: z.string().optional() },
+    async ({ html, url }) => jsonText(seoAuditHtml(html, url || 'https://example.com/'))
   );
 
   server.tool(

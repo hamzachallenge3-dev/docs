@@ -3,14 +3,17 @@
     "id": "hub-boss",
     "pack": "hub",
     "category": "orchestrator",
-    "description": "Hamza Agent Hub boss: differentiates work across Desk, ECC68, and Forge packs and assigns the right specialists.",
+    "description": "Hamza Agent Hub boss with FULL roster awareness: differentiates work across Desk, ECC68, Forge, and Tools13 and assigns the right specialists.",
     "tools": [
       "hub_list_packs",
       "hub_list_agents",
+      "hub_full_roster",
+      "hub_tools13_lookup",
       "dispatch_agent",
       "workspace_write",
       "workspace_list",
-      "workspace_read"
+      "workspace_read",
+      "workspace_grep"
     ],
     "model_ready": false,
     "tested": false,
@@ -30,8 +33,7 @@
       "workspace_grep"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/desk/agents/desk-inbox-to-lead.md"
+    "tested": false
   },
   {
     "id": "desk-weekly-report",
@@ -45,8 +47,7 @@
       "workspace_write"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/desk/agents/desk-weekly-report.md"
+    "tested": false
   },
   {
     "id": "desk-meeting-to-action",
@@ -61,8 +62,7 @@
       "workspace_grep"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/desk/agents/desk-meeting-to-action.md"
+    "tested": false
   },
   {
     "id": "desk-lead-cleaner",
@@ -76,8 +76,7 @@
       "workspace_list"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/desk/agents/desk-lead-cleaner.md"
+    "tested": false
   },
   {
     "id": "forge-detect",
@@ -90,8 +89,7 @@
       "workspace_list"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/forge/agents/forge-detect.md"
+    "tested": false
   },
   {
     "id": "forge-github-intelligence",
@@ -106,8 +104,7 @@
       "workspace_list"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/forge/agents/forge-github-intelligence.md"
+    "tested": false
   },
   {
     "id": "forge-agent-miner",
@@ -122,8 +119,7 @@
       "workspace_list"
     ],
     "model_ready": false,
-    "tested": false,
-    "profile": "packs/forge/agents/forge-agent-miner.md"
+    "tested": false
   },
   {
     "id": "forge-skill-pack-builder",
@@ -137,8 +133,230 @@
       "workspace_grep"
     ],
     "model_ready": false,
+    "tested": false
+  },
+  {
+    "id": "tool13-lapian-notes",
+    "pack": "tools13",
+    "category": "Video / AI analysis helper",
+    "description": "Lapian Notes Companion \u2014 Included full original ChatGPT plugin archive; samples film frames, not full film AI analysis. Source: https://github.com/bkingfilm/lapian-notes. Tested: PASS_LOCAL_CODE.",
+    "tools": [
+      "film_pack_prepare",
+      "workspace_list",
+      "workspace_read",
+      "workspace_write"
+    ],
+    "tool13_id": "lapian-notes",
+    "source": "https://github.com/bkingfilm/lapian-notes",
     "tested": false,
-    "profile": "packs/forge/agents/forge-skill-pack-builder.md"
+    "offline_file": "original_plugins/lapian-notes-companion-v1.zip",
+    "profile": "packs/tools13/agents/tool13-lapian-notes.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-seo-audit",
+    "pack": "tools13",
+    "category": "SEO / research",
+    "description": "Free Marketing SEO Audit \u2014 Included full user-owned original plugin archive; NOT an Okara client. Works on HTML. Source: https://okara.ai/agent. Tested: PASS_LOCAL_CODE.",
+    "tools": [
+      "seo_audit_html",
+      "workspace_list",
+      "workspace_read",
+      "workspace_write"
+    ],
+    "tool13_id": "seo-audit",
+    "source": "https://okara.ai/agent",
+    "tested": false,
+    "offline_file": "original_plugins/free-marketing-seo-audit-v1.zip",
+    "profile": "packs/tools13/agents/tool13-seo-audit.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-nanomuse",
+    "pack": "tools13",
+    "category": "AI Agent",
+    "description": "nanoMuse Bridge \u2014 Private ChatGPT plugin available by plugin ID, not archived in this ZIP; official upstream source retrievable. Not Boss-connected. Source: https://github.com/nano-muse/nanoMuse. Tested: PASS_CLI_UNIT_20_AND_MOCK_BRIDGE.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "nanomuse",
+    "source": "https://github.com/nano-muse/nanoMuse",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-nanomuse.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-n8n-library",
+    "pack": "tools13",
+    "category": "Automation",
+    "description": "n8n Workflow Library \u2014 Private ChatGPT skill not archived; official workflows available by separate source fetch. No flow activated. Source: https://github.com/Zie619/n8n-workflows. Tested: PASS_PUBLIC_WORKFLOW_JSON_VALIDATION.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "n8n-library",
+    "source": "https://github.com/Zie619/n8n-workflows",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-n8n-library.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-ecc-68",
+    "pack": "tools13",
+    "category": "AI coding / Agents",
+    "description": "ECC 68 Skills \u2014 68 actual skill files confirmed in private plugin, but original private release archive not bundled; upstream sources available. Source: https://github.com/affaan-m/ECC. Tested: PASS_68_FILES_AND_REFERENCES.",
+    "tools": [
+      "hub_list_agents",
+      "workspace_list",
+      "workspace_write"
+    ],
+    "tool13_id": "ecc-68",
+    "source": "https://github.com/affaan-m/ECC",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-ecc-68.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-munder-difflin",
+    "pack": "tools13",
+    "category": "Multi Agent Orchestrator",
+    "description": "Munder Difflin \u2014 Electron app tests; desktop UI was not run; no Boss connection. Source: https://github.com/HarnessMD/munder-difflin. Tested: PASS_18_OF_18_UNIT_TESTS.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "munder-difflin",
+    "source": "https://github.com/HarnessMD/munder-difflin",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-munder-difflin.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-scrapling",
+    "pack": "tools13",
+    "category": "Web / Scraping",
+    "description": "Scrapling \u2014 Requires additional packages; sample public fetch was verified. Source: https://github.com/D4Vinci/Scrapling. Tested: PASS_HTML_PARSER_AND_LIVE_HTTP_200.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "scrapling",
+    "source": "https://github.com/D4Vinci/Scrapling",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-scrapling.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-goose",
+    "pack": "tools13",
+    "category": "AI coding / Agents",
+    "description": "Goose CLI \u2014 goose --version 1.54.0 passed. Doctor requires provider configuration. User must authorize any paid provider. Source: https://github.com/aaif-goose/goose. Tested: PASS_GOOSEx64_CLI_VERSION_ONLY.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "goose",
+    "source": "https://github.com/aaif-goose/goose",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-goose.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-headroom",
+    "pack": "tools13",
+    "category": "AI / Context compression",
+    "description": "Headroom \u2014 Local compression example retained FATAL in logs. Source: https://github.com/headroomlabs-ai/headroom. Tested: PASS_LOCAL_COMPRESSION.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "headroom",
+    "source": "https://github.com/headroomlabs-ai/headroom",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-headroom.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-glm-5.3-flash",
+    "pack": "tools13",
+    "category": "Model / AI",
+    "description": "GLM-5.3-Flash \u2014 Large model weights intentionally excluded; needs appropriate GPU provider. Source: https://huggingface.co/zai-org/GLM-5.3-Flash. Tested: MODEL_METADATA_VERIFIED_NOT_INFERENCED.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_list",
+      "workspace_write"
+    ],
+    "tool13_id": "glm-5.3-flash",
+    "source": "https://huggingface.co/zai-org/GLM-5.3-Flash",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-glm-5.3-flash.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-kimi-k3",
+    "pack": "tools13",
+    "category": "Model / AI",
+    "description": "Kimi K3 \u2014 Large model weights intentionally excluded; needs appropriate GPU provider. Source: https://huggingface.co/moonshotai/Kimi-K3. Tested: MODEL_METADATA_VERIFIED_NOT_INFERENCED.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_list",
+      "workspace_write"
+    ],
+    "tool13_id": "kimi-k3",
+    "source": "https://huggingface.co/moonshotai/Kimi-K3",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-kimi-k3.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-open-generative-ai",
+    "pack": "tools13",
+    "category": "AI video / image",
+    "description": "Open Generative AI \u2014 Full AI video generation not run; may require external model/API resources. Source: https://github.com/Anil-matcha/Open-Generative-AI. Tested: PASS_50_OF_50_UNIT_TESTS.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "open-generative-ai",
+    "source": "https://github.com/Anil-matcha/Open-Generative-AI",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-open-generative-ai.md",
+    "model_ready": false
+  },
+  {
+    "id": "tool13-agent-reach",
+    "pack": "tools13",
+    "category": "Research / web",
+    "description": "Agent Reach \u2014 Selected public and security unit tests; some channels require credentials. Source: https://github.com/Panniantong/Agent-Reach. Tested: PASS_81_OF_81_UNIT_TESTS.",
+    "tools": [
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list"
+    ],
+    "tool13_id": "agent-reach",
+    "source": "https://github.com/Panniantong/Agent-Reach",
+    "tested": false,
+    "offline_file": null,
+    "profile": "packs/tools13/agents/tool13-agent-reach.md",
+    "model_ready": false
   },
   {
     "id": "ecc-a11y-architect",

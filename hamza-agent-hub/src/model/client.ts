@@ -99,7 +99,14 @@ function heuristic(opts: {
   const step = opts.messages.filter((m) => m.role === 'tool').length;
   const lastUser = [...opts.messages].reverse().find((m) => m.role === 'user')?.content || '';
 
-  if (opts.agentId === 'hub-boss' && step === 0 && tools.has('workspace_write')) {
+  if (opts.agentId === 'hub-boss' && step === 0 && tools.has('hub_full_roster')) {
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [{ id: 'h0', name: 'hub_full_roster', arguments: {} }],
+    };
+  }
+  if (opts.agentId === 'hub-boss' && step === 1 && tools.has('workspace_write')) {
     return {
       provider: 'heuristic',
       content: '',
@@ -109,7 +116,25 @@ function heuristic(opts: {
           name: 'workspace_write',
           arguments: {
             path: 'artifacts/hub-boss-plan.json',
-            content: JSON.stringify({ agent: 'hub-boss', task: lastUser.slice(0, 400) }, null, 2),
+            content: JSON.stringify({ agent: 'hub-boss', task: lastUser.slice(0, 400), aware: 'full-roster' }, null, 2),
+          },
+        },
+      ],
+    };
+  }
+
+  if (opts.agentId.startsWith('tool13-seo') && step === 0 && tools.has('seo_audit_html')) {
+    const htmlMatch = lastUser.match(/```html([\s\S]*?)```/i) || lastUser.match(/<html[\s\S]*<\/html>/i);
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [
+        {
+          id: 'h1',
+          name: 'seo_audit_html',
+          arguments: {
+            html: htmlMatch?.[1] || htmlMatch?.[0] || '<html lang="en"><head><title>t</title></head><body><h1>Hi</h1></body></html>',
+            url: 'https://example.com/',
           },
         },
       ],

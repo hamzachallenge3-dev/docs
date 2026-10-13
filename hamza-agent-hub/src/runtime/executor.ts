@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
 import { callModel, type ModelMessage } from '../model/client.js';
-import { planWithBoss } from './boss.js';
+import { buildBossDirectory, planWithBoss } from './boss.js';
 import { getAgent, loadRoleInstructions } from './registry.js';
 import { appendEvent, getTask, updateTask } from '../storage/db.js';
 import { ensureWorkspace } from '../security/workspace.js';
@@ -28,19 +28,26 @@ export async function executeTask(taskId: string, signal: AbortSignal): Promise<
   const messages: ModelMessage[] = [];
 
   let effectiveTask = task.task;
+  let bossDirectory = '';
   if (agent.id === 'hub-boss' || agent.id === 'ecc-chief-of-staff') {
     const plan = planWithBoss(task.task);
+    bossDirectory = buildBossDirectory();
     fs.mkdirSync(path.join(workspaceRoot, 'artifacts'), { recursive: true });
     const rel = 'artifacts/hub-routing-plan.json';
     fs.writeFileSync(path.join(workspaceRoot, rel), JSON.stringify(plan, null, 2));
-    artifacts.push(rel);
-    evidence.push(`boss routed primary=${plan.primary} pack=${plan.pack}`);
+    const rosterRel = 'artifacts/hub-full-roster.md';
+    fs.writeFileSync(path.join(workspaceRoot, rosterRel), bossDirectory);
+    artifacts.push(rel, rosterRel);
+    evidence.push(
+      `boss routed primary=${plan.primary} pack=${plan.pack} roster_size=${plan.roster_size}`
+    );
     appendEvent(taskId, 'routing', plan);
     effectiveTask = [
-      'You are the Hamza Agent Hub boss. Differentiate work across Desk, ECC68, and Forge.',
-      `Routing plan:\n${JSON.stringify(plan, null, 2)}`,
+      'You are the Hamza Agent Hub boss with FULL knowledge of every agent.',
+      `Roster size: ${plan.roster_size}. Known packs: ${plan.known_packs.join(', ')}.`,
+      `Routing plan (scored against the full roster):\n${JSON.stringify(plan, null, 2)}`,
       `Original task:\n${task.task}`,
-      'Dispatch specialists and write an assignment brief.',
+      'Dispatch specialists using only IDs from the roster. Write an assignment brief.',
     ].join('\n\n');
   }
 
@@ -49,8 +56,11 @@ export async function executeTask(taskId: string, signal: AbortSignal): Promise<
     'Use only permitted tools. Stay inside the workspace. No paid calls, no unauthorized outbound messages.',
     'Do not modify production Hamza Agent Hub or production GLM/Headroom configs — this is the lab plugin.',
     '--- ROLE ---',
-    role.slice(0, 20_000),
-  ].join('\n');
+    role.slice(0, 16_000),
+    agent.id === 'hub-boss' ? `--- FULL ROSTER (you know them all) ---\n${bossDirectory.slice(0, 40_000)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   messages.push({ role: 'user', content: effectiveTask });
   const started = Date.now();

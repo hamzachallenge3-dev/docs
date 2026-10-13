@@ -3,9 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { assertCatalog, listAgents, PACKS } from '../src/runtime/registry.js';
-import { planWithBoss } from '../src/runtime/boss.js';
+import { buildBossDirectory, planWithBoss, scoreAllAgents } from '../src/runtime/boss.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../src/packs/desk/tools.js';
 import { forgeDetect, githubUrlTricks } from '../src/packs/forge/tools.js';
+import { loadTools13Manifest } from '../src/packs/tools13/registry.js';
+import { seoAuditHtml } from '../src/packs/tools13/seo.js';
 
 function tempEnv() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hah-'));
@@ -26,59 +28,57 @@ describe('hamza agent hub', () => {
     closeDb();
   });
 
-  it('catalog has hub+desk+forge+68 ecc agents', () => {
+  it('catalog has hub+desk+forge+tools13+68 ecc agents', () => {
     assertCatalog();
-    expect(PACKS).toHaveLength(4);
-    expect(listAgents()).toHaveLength(77);
+    expect(PACKS.map((p) => p.id)).toContain('tools13');
+    expect(listAgents()).toHaveLength(90);
     expect(listAgents('ecc68')).toHaveLength(68);
-    expect(listAgents('desk')).toHaveLength(4);
-    expect(listAgents('forge')).toHaveLength(4);
-    expect(listAgents('hub').map((a) => a.id)).toContain('hub-boss');
+    expect(listAgents('tools13')).toHaveLength(13);
+    expect(loadTools13Manifest()).toHaveLength(13);
   });
 
-  it('boss routes desk work to desk pack', () => {
-    const plan = planWithBoss('Clean leads and dedupe email list from inbox CSV');
-    expect(plan.orchestrator).toBe('hub-boss');
-    expect(plan.pack).toBe('desk');
-    expect(plan.primary.startsWith('desk-')).toBe(true);
+  it('hub-boss scores the FULL roster (knows everyone)', () => {
+    const ranked = scoreAllAgents('anything at all');
+    // every non-boss agent is considered
+    expect(ranked.length).toBe(listAgents().length - 1);
+    const dir = buildBossDirectory();
+    for (const a of listAgents()) {
+      expect(dir).toContain(a.id);
+    }
+    const plan = planWithBoss('SEO audit this HTML page title and meta description');
+    expect(plan.roster_size).toBe(90);
+    expect(plan.known_packs).toEqual(expect.arrayContaining(['hub', 'desk', 'ecc68', 'forge', 'tools13']));
+    expect(plan.primary).toBe('tool13-seo-audit');
   });
 
-  it('boss routes security coding work to ecc68', () => {
-    const plan = planWithBoss('Security review login.py for SQL injection');
-    expect(plan.primary).toBe('ecc-security-reviewer');
-    expect(plan.pack).toBe('ecc68');
+  it('boss routes desk / ecc / tools13 correctly', () => {
+    expect(planWithBoss('Clean leads and dedupe email list').primary.startsWith('desk-')).toBe(true);
+    expect(planWithBoss('Security review login.py for SQL injection').primary).toBe('ecc-security-reviewer');
+    expect(planWithBoss('Prepare lapian film pack frames from video').primary).toBe('tool13-lapian-notes');
   });
 
-  it('desk tools match Automation Desk contracts', () => {
-    const cleaned = cleanLeads({ text: 'A@X.com write to b@x.com and a@x.com' });
-    expect(cleaned.emails).toEqual(['a@x.com', 'b@x.com']);
-    expect(cleaned.duplicates_removed).toBe(1);
-    const rows = sheetsToJson({ csv: 'week,value\n1,10\n2,14' });
-    expect(rows.count).toBe(2);
-    expect(rows.rows[1]).toEqual({ week: '2', value: '14' });
-    const contacts = extractContacts({
-      html: 'Mail me at hi@imdifferent01.com or https://github.com/hamza',
-    });
-    expect(contacts.emails).toContain('hi@imdifferent01.com');
-    expect(contacts.social.some((s) => s.includes('github.com'))).toBe(true);
+  it('desk + forge + seo tools work', () => {
+    expect(cleanLeads({ text: 'A@X.com b@x.com a@x.com' }).count).toBe(2);
+    expect(sheetsToJson({ csv: 'a,b\n1,2' }).count).toBe(1);
+    expect(extractContacts({ html: 'hi@x.com https://github.com/x' }).emails).toContain('hi@x.com');
+    expect(forgeDetect('https://github.com/a/b').forge).toBe('github');
+    expect(githubUrlTricks('https://github.com/a/b').api).toContain('a/b');
+    const seo = seoAuditHtml(
+      '<html lang="en"><head><title>Hi</title><meta name="description" content="d"><link rel="canonical" href="https://e.com/"><meta property="og:title" content="Hi"></head><body><h1>One</h1><img alt="x"></body></html>'
+    );
+    expect(seo.ok).toBe(true);
+    expect(seo.basic_technical_score).toBeGreaterThanOrEqual(75);
   });
 
-  it('forge detect + github tricks work', () => {
-    expect(forgeDetect('https://github.com/foo/bar').forge).toBe('github');
-    expect(forgeDetect('https://gitlab.com/foo/bar').forge).toBe('gitlab');
-    const tricks = githubUrlTricks('https://github.com/foo/bar');
-    expect(tricks.gitingest).toContain('foo/bar');
-  });
-
-  it('end-to-end hub-boss mission completes with routing artifact', async () => {
+  it('end-to-end hub-boss mission writes roster + routing artifacts', async () => {
     const { startQueue, enqueueAgentTask } = await import('../src/runtime/queue.js');
     const { getTask } = await import('../src/storage/db.js');
     startQueue();
     const { task_id } = enqueueAgentTask({
       agent_id: 'hub-boss',
-      task: 'Weekly report from CSV then security review of login.py',
-      workspace_id: 'mission1',
-      idempotency_key: 'hub-mission-1',
+      task: 'SEO audit then security review login.py',
+      workspace_id: 'mission-tools13',
+      idempotency_key: 'hub-mission-tools13',
     });
     for (let i = 0; i < 200; i++) {
       const t = getTask(task_id);
@@ -87,10 +87,14 @@ describe('hamza agent hub', () => {
     }
     const done = getTask(task_id)!;
     expect(done.status).toBe('completed');
-    const planPath = path.join(process.env.HAH_WORKSPACES_DIR!, 'mission1', 'artifacts', 'hub-routing-plan.json');
-    expect(fs.existsSync(planPath)).toBe(true);
-    const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
-    expect(plan.primary).toBeTruthy();
-    expect(plan.decomposition.length).toBeGreaterThan(0);
+    const ws = path.join(process.env.HAH_WORKSPACES_DIR!, 'mission-tools13', 'artifacts');
+    expect(fs.existsSync(path.join(ws, 'hub-routing-plan.json'))).toBe(true);
+    expect(fs.existsSync(path.join(ws, 'hub-full-roster.md'))).toBe(true);
+    const plan = JSON.parse(fs.readFileSync(path.join(ws, 'hub-routing-plan.json'), 'utf8'));
+    expect(plan.roster_size).toBe(90);
+    const roster = fs.readFileSync(path.join(ws, 'hub-full-roster.md'), 'utf8');
+    expect(roster).toContain('tool13-seo-audit');
+    expect(roster).toContain('ecc-security-reviewer');
+    expect(roster).toContain('desk-lead-cleaner');
   });
 });

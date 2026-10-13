@@ -21,7 +21,8 @@ export const PACKS = [
   {
     id: 'hub',
     name: 'Hamza Agent Hub Boss',
-    description: 'Meta orchestrator that differentiates work across all packs',
+    description:
+      'Meta orchestrator with FULL roster awareness — differentiates work across every pack and every agent',
   },
   {
     id: 'desk',
@@ -37,6 +38,12 @@ export const PACKS = [
     id: 'forge',
     name: 'Cross-Forge Intelligence',
     description: 'Forge detect, GitHub tricks, agent/skill/MCP mining from Hamza plugin-builder handoff',
+  },
+  {
+    id: 'tools13',
+    name: 'Hub Boss Tools Recovery 13',
+    description:
+      '13 referenced Hub Boss tools (SEO audit, Lapian, nanoMuse, n8n, ECC, Goose, Headroom, models, …)',
   },
 ] as const;
 
@@ -71,12 +78,20 @@ export function loadRoleInstructions(agentId: string): string {
 
 export function assertCatalog(): void {
   const ids = catalog.map((a) => a.id);
-  if (ids.length < 70) throw new Error(`expected >=70 agents (hub+desk+forge+ecc68), got ${ids.length}`);
+  if (ids.length < 85) {
+    throw new Error(`expected >=85 agents (hub+desk+forge+ecc68+tools13), got ${ids.length}`);
+  }
   if (new Set(ids).size !== ids.length) throw new Error('duplicate agent ids');
   const packs = new Set(catalog.map((a) => a.pack));
-  for (const required of ['hub', 'desk', 'ecc68', 'forge']) {
+  for (const required of ['hub', 'desk', 'ecc68', 'forge', 'tools13']) {
     if (!packs.has(required)) throw new Error(`missing pack: ${required}`);
   }
   const ecc = catalog.filter((a) => a.pack === 'ecc68');
   if (ecc.length !== 68) throw new Error(`ecc68 pack must have 68 agents, got ${ecc.length}`);
+  const t13 = catalog.filter((a) => a.pack === 'tools13');
+  if (t13.length !== 13) throw new Error(`tools13 pack must have 13 agents, got ${t13.length}`);
+  const boss = catalog.find((a) => a.id === 'hub-boss');
+  if (!boss?.tools.includes('hub_full_roster') || !boss.tools.includes('hub_list_agents')) {
+    throw new Error('hub-boss must include hub_full_roster and hub_list_agents for full awareness');
+  }
 }

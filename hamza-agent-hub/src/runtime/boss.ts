@@ -35,6 +35,7 @@ const BOOSTS: Array<{ match: RegExp; agent: string; weight: number }> = [
   { match: /react|jsx|next\.js/i, agent: 'ecc-react-reviewer', weight: 12 },
   { match: /github tricks|gitingest|repo intelligence/i, agent: 'forge-github-intelligence', weight: 12 },
   { match: /mine agents|find mcp|skill\.md/i, agent: 'forge-agent-miner', weight: 12 },
+  { match: /\bbrowse\b|catalog|directory|list agents|show agents|من هم الوكلاء|تصفح/i, agent: 'hub-agent-browse', weight: 18 },
 ];
 
 function tokens(text: string): string[] {
@@ -48,7 +49,7 @@ function tokens(text: string): string[] {
 export function scoreAllAgents(task: string): Array<{ agent: AgentDef; score: number }> {
   const taskTokens = new Set(tokens(task));
   const lower = task.toLowerCase();
-  const agents = listAgents().filter((a) => a.id !== 'hub-boss');
+  const agents = listAgents().filter((a) => a.id !== 'hub-boss'); // browse agent stays scorable
 
   return agents
     .map((agent) => {

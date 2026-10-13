@@ -6,6 +6,7 @@ import { getTask, listEvents } from '../storage/db.js';
 import { modelStatus } from '../model/client.js';
 import { config } from '../config.js';
 import { buildBossDirectory, planWithBoss } from '../runtime/boss.js';
+import { browseAgentDetail, browseEverything } from '../runtime/browse.js';
 import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.js';
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
@@ -41,6 +42,8 @@ export function createHamzaHubServer(): McpServer {
       tools13_agents: listAgents('tools13').length,
       tools13_manifest: loadTools13Manifest().length,
       boss_knows_all: Boolean(getAgent('hub-boss')?.tools.includes('hub_full_roster')),
+      agent_browse: Boolean(getAgent('hub-agent-browse')?.tools.includes('hub_agent_browse')),
+      hub_agents: listAgents('hub').length,
       queue: queueStats(),
       model,
       storage: { db_exists: fs.existsSync(config.dbPath) },
@@ -83,6 +86,42 @@ export function createHamzaHubServer(): McpServer {
     'Return the complete agent directory that hub-boss knows (all packs)',
     {},
     async () => jsonText({ count: listAgents().length, directory: buildBossDirectory() })
+  );
+
+  server.tool(
+    'hub_agent_browse',
+    'Browse everything in the one plugin: packs, all agents, tools13, MCP tools. Search with query or open one agent_id.',
+    {
+      query: z.string().optional(),
+      pack: z.string().optional(),
+      category: z.string().optional(),
+      agent_id: z.string().optional(),
+      limit: z.number().int().positive().optional(),
+      include_tools13: z.boolean().optional(),
+      include_mcp: z.boolean().optional(),
+    },
+    async (args) => {
+      if (args.agent_id) {
+        const detail = browseAgentDetail(args.agent_id);
+        if (!detail.agent) {
+          return {
+            isError: true,
+            content: [{ type: 'text' as const, text: `unknown agent: ${args.agent_id}` }],
+          };
+        }
+        return jsonText(detail);
+      }
+      return jsonText(
+        browseEverything({
+          query: args.query,
+          pack: args.pack,
+          category: args.category,
+          limit: args.limit,
+          include_tools13: args.include_tools13,
+          include_mcp: args.include_mcp,
+        })
+      );
+    }
   );
 
   server.tool(

@@ -6,6 +6,7 @@ import { cleanLeads, sheetsToJson, extractContacts } from '../packs/desk/tools.j
 import { forgeDetect, githubUrlTricks, agentMiningQueries } from '../packs/forge/tools.js';
 import { listAgents, PACKS } from '../runtime/registry.js';
 import { buildBossDirectory } from '../runtime/boss.js';
+import { browseAgentDetail, browseEverything } from '../runtime/browse.js';
 import { loadTools13Manifest, lookupTool13 } from '../packs/tools13/registry.js';
 import { seoAuditHtml } from '../packs/tools13/seo.js';
 import { spawnSync } from 'node:child_process';
@@ -40,6 +41,28 @@ export async function runTool(
       }
       case 'hub_full_roster':
         return { ok: true, name: call.name, output: buildBossDirectory() };
+      case 'hub_agent_browse': {
+        const agentId = call.arguments.agent_id ? String(call.arguments.agent_id) : '';
+        if (agentId) {
+          const detail = browseAgentDetail(agentId);
+          return {
+            ok: Boolean(detail.agent),
+            name: call.name,
+            output: detail.agent
+              ? JSON.stringify(detail, null, 2)
+              : `unknown agent: ${agentId}`,
+          };
+        }
+        const result = browseEverything({
+          query: call.arguments.query ? String(call.arguments.query) : undefined,
+          pack: call.arguments.pack ? String(call.arguments.pack) : undefined,
+          category: call.arguments.category ? String(call.arguments.category) : undefined,
+          limit: call.arguments.limit ? Number(call.arguments.limit) : undefined,
+          include_tools13: call.arguments.include_tools13 === false ? false : undefined,
+          include_mcp: call.arguments.include_mcp === false ? false : undefined,
+        });
+        return { ok: true, name: call.name, output: JSON.stringify(result, null, 2) };
+      }
       case 'hub_tools13_lookup': {
         const q = String(call.arguments.query || call.arguments.id || '');
         if (!q || q === '*' || q === 'all') {

@@ -123,6 +123,30 @@ function heuristic(opts: {
     };
   }
 
+  if (opts.agentId === 'hub-agent-browse' && step === 0 && tools.has('hub_agent_browse')) {
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [{ id: 'b0', name: 'hub_agent_browse', arguments: { query: lastUser.slice(0, 200) } }],
+    };
+  }
+  if (opts.agentId === 'hub-agent-browse' && step === 1 && tools.has('workspace_write')) {
+    return {
+      provider: 'heuristic',
+      content: '',
+      tool_calls: [
+        {
+          id: 'b1',
+          name: 'workspace_write',
+          arguments: {
+            path: 'artifacts/agent-browse.md',
+            content: `# Agent browse\n\nQuery: ${lastUser.slice(0, 400)}\n\nSee hub_agent_browse tool output for the full catalog hits across packs, agents, tools13, and MCP tools.\n`,
+          },
+        },
+      ],
+    };
+  }
+
   if (opts.agentId.startsWith('tool13-seo') && step === 0 && tools.has('seo_audit_html')) {
     const htmlMatch = lastUser.match(/```html([\s\S]*?)```/i) || lastUser.match(/<html[\s\S]*<\/html>/i);
     return {

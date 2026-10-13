@@ -8,6 +8,7 @@
       "hub_list_packs",
       "hub_list_agents",
       "hub_full_roster",
+      "hub_agent_browse",
       "hub_tools13_lookup",
       "dispatch_agent",
       "workspace_write",
@@ -18,6 +19,25 @@
     "model_ready": false,
     "tested": false,
     "profile": "packs/hub/agents/hub-boss.md"
+  },
+  {
+    "id": "hub-agent-browse",
+    "pack": "hub",
+    "category": "catalog_browser",
+    "description": "Browse everything in the one plugin: all packs, 90+ agents, tools13, and MCP surface tools. Search by query or open a specific agent_id.",
+    "tools": [
+      "hub_agent_browse",
+      "hub_full_roster",
+      "hub_list_packs",
+      "hub_list_agents",
+      "hub_tools13_lookup",
+      "workspace_write",
+      "workspace_list",
+      "workspace_read"
+    ],
+    "model_ready": false,
+    "tested": true,
+    "profile": "packs/hub/agents/hub-agent-browse.md"
   },
   {
     "id": "desk-inbox-to-lead",

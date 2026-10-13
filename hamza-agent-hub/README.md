@@ -9,12 +9,14 @@
 | Cross-Forge / Plugin Builder | `packs/forge/` |
 | Hub Boss Tools Recovery 13 | `packs/tools13/` |
 | الموزّع الذي يعرف الجميع | `hub-boss` في `packs/hub/` |
+| متصفح الكتالوج | `hub-agent-browse` + أداة `hub_agent_browse` |
 
 لا تثبّت `ecc68-lab` كإضافة منفصلة — دُمجت هنا.
 
-## الوكلاء: 90
+## الوكلاء: 91
 
 - **1** `hub-boss` — يعرف الدليل الكامل ويفرّق المهام على الجميع
+- **1** `hub-agent-browse` — يتصفّح كل الـ packs / الوكلاء / tools13 / أدوات MCP
 - **4** Desk
 - **68** ECC
 - **4** Forge
@@ -22,7 +24,7 @@
 
 ## أدوات MCP الرئيسية
 
-`hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task` · `clean_leads` · `sheets_to_json` · `extract_contacts` · `seo_audit_html` · `forge_detect` · `github_url_tricks` · `agent_mining_queries`
+`hub_health` · `hub_list_packs` · `hub_list_agents` · `hub_full_roster` · `hub_agent_browse` · `hub_boss_route` · `hub_tools13_lookup` · `run_agent` · `task_status` · `task_result` · `cancel_task` · `clean_leads` · `sheets_to_json` · `extract_contacts` · `seo_audit_html` · `forge_detect` · `github_url_tricks` · `agent_mining_queries`
 
 ## تثبيت واحد
 
@@ -64,6 +66,21 @@ run_agent(
 الـ boss يكتب:
 - `artifacts/hub-full-roster.md` — كل الوكلاء الذين يعرفهم
 - `artifacts/hub-routing-plan.json` — من اختار ولماذا
+
+## تصفّح كل شيء (agent browse)
+
+```text
+hub_agent_browse(query="SEO security leads")
+# أو
+run_agent(
+  agent_id="hub-agent-browse",
+  task="browse SEO and security agents",
+  workspace_id="browse",
+  idempotency_key="browse-1"
+)
+```
+
+يعيد packs + agents + tools13 + MCP tools، ويكتب `artifacts/agent-browse.md`.
 
 ## حدود صريحة
 

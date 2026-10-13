@@ -20,9 +20,9 @@ const catalog = catalogJson as AgentDef[];
 export const PACKS = [
   {
     id: 'hub',
-    name: 'Hamza Agent Hub Boss',
+    name: 'Hamza Agent Hub Boss + Browse',
     description:
-      'Meta orchestrator with FULL roster awareness — differentiates work across every pack and every agent',
+      'hub-boss routes with FULL roster awareness; hub-agent-browse searches packs, agents, tools13, and MCP tools',
   },
   {
     id: 'desk',
@@ -78,8 +78,8 @@ export function loadRoleInstructions(agentId: string): string {
 
 export function assertCatalog(): void {
   const ids = catalog.map((a) => a.id);
-  if (ids.length < 85) {
-    throw new Error(`expected >=85 agents (hub+desk+forge+ecc68+tools13), got ${ids.length}`);
+  if (ids.length < 86) {
+    throw new Error(`expected >=86 agents (hub+browse+desk+forge+ecc68+tools13), got ${ids.length}`);
   }
   if (new Set(ids).size !== ids.length) throw new Error('duplicate agent ids');
   const packs = new Set(catalog.map((a) => a.pack));
@@ -91,7 +91,15 @@ export function assertCatalog(): void {
   const t13 = catalog.filter((a) => a.pack === 'tools13');
   if (t13.length !== 13) throw new Error(`tools13 pack must have 13 agents, got ${t13.length}`);
   const boss = catalog.find((a) => a.id === 'hub-boss');
-  if (!boss?.tools.includes('hub_full_roster') || !boss.tools.includes('hub_list_agents')) {
-    throw new Error('hub-boss must include hub_full_roster and hub_list_agents for full awareness');
+  if (
+    !boss?.tools.includes('hub_full_roster') ||
+    !boss.tools.includes('hub_list_agents') ||
+    !boss.tools.includes('hub_agent_browse')
+  ) {
+    throw new Error('hub-boss must include hub_full_roster, hub_list_agents, hub_agent_browse');
+  }
+  const browser = catalog.find((a) => a.id === 'hub-agent-browse');
+  if (!browser?.tools.includes('hub_agent_browse')) {
+    throw new Error('hub-agent-browse must include hub_agent_browse tool');
   }
 }

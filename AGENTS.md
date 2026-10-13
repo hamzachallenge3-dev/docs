@@ -15,7 +15,8 @@
 ## Hamza Agent Hub (one plugin only)
 
 - **Single MCP plugin:** `hamza-agent-hub/` — Desk + ECC68 + Forge + Tools13
-- Boss with full roster: `hub-boss` (90 agents)
+- Boss with full roster: `hub-boss` (91 agents)
+- Catalog browser: `hub-agent-browse` / MCP tool `hub_agent_browse` (packs + agents + tools13 + MCP)
 - `ecc68-lab/` is a redirect stub only — do not install it as a separate MCP server
 - Cursor MCP example: `cursor-mcp.hamza-agent-hub.example.json`
 - Do not mutate production Hamza Agent Hub or production GLM/Headroom
